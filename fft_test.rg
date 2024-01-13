@@ -9,6 +9,17 @@ fftw_c.FFTW_FORWARD = -1
 fftw_c.FFTW_BACKWARD = 1
 fftw_c.FFTW_ESTIMATE = 2 ^ 6
 
+
+local gpuhelper = require("regent/gpu/helper")
+local use_gpu = gpuhelper.check_gpu_available() and '0' or '1'
+local cufft_c
+
+
+if use_gpu then
+  cufft_c = terralib.includec("cufft.h")
+  terralib.linklibrary("libcufft.so")
+end
+
 local fft = {}
 
 --itype should be the dimension of the transform and dtype = complex64
@@ -26,9 +37,20 @@ function fft.generate_fft_interface(itype, dtype)
 
   local iface = {}
 
-  struct iface.plan {
-    p : fftw_c.fftw_plan
+  --if use_gpu then 
+  --  local fspace iface.plan {
+  --    p : fftw_c.fftw_plan,
+  --    cufft_p : cufft_c.cufftHandle,
+  --  }
+  --  else
+
+
+  local fspace iface_plan {
+      p : fftw_c.fftw_plan,
   }
+  
+  iface.plan = iface_plan
+     
 
   --Function to get base pointer of region
   local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
@@ -56,8 +78,15 @@ function fft.generate_fft_interface(itype, dtype)
 
 
   __demand(__inline)
-  task iface.make_plan(input : region(ispace(int1d), complex64),output : region(ispace(int1d), complex64))
-  where reads writes(input, output) do
+  task iface.make_plan(input : region(ispace(int1d), complex64),output : region(ispace(int1d), complex64), plan : region(ispace(int1d), iface.plan))
+  where reads writes(input, output, plan) do
+
+
+    var p : int1d(iface.plan, plan)
+    for x in plan do
+      p = x
+      break
+    end
 
     --var is = ispace(int1d, 12, -1)
     --is.bounds -- returns rect1d { lo = int1d(-1), hi = int1d(10) }
@@ -76,25 +105,45 @@ function fft.generate_fft_interface(itype, dtype)
     -- sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1)
     -- flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     
-    return iface.plan {
+    @p = iface.plan {
       fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
     }
   end
 
+
+
   __demand(__inline)
-  task iface.execute_plan(input : region(ispace(int1d), complex64), output : region(ispace(int1d), complex64), p : iface.plan)
-  where reads(input), writes(output) do
+  task iface.execute_plan(input : region(ispace(int1d), complex64), output : region(ispace(int1d), complex64), plan : region(ispace(int1d), iface.plan))
+  where reads(input, plan), writes(output) do
+
+    var p : int1d(iface.plan, plan)
+    for x in plan do
+      p = x
+      break
+    end
+
+    var input_base = get_base(rect_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
+    var output_base = get_base(rect_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
+    fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))
+
+
+    --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
     fftw_c.fftw_execute(p.p)
   end
 
   __demand(__inline)
-  task iface.destroy_plan(p : iface.plan)
+  task iface.destroy_plan(plan : region(ispace(int1d), iface.plan))
+  where reads writes(plan) do
+    var p : int1d(iface.plan, plan)
+    for x in plan do
+      p = x
+      break
+    end
     fftw_c.fftw_destroy_plan(p.p)
   end
 
   return iface
 end
-
 
 task print_array(input : region(ispace(int1d), complex64), arrayName: rawstring)
 where reads (input) do
@@ -111,7 +160,7 @@ local fft1d = fft.generate_fft_interface(int1d, complex64)
 task main()
   var r = region(ispace(int1d, 3), complex64)
   var s = region(ispace(int1d, 3), complex64)
-  fill(s, 1)
+  
 
   for x in r do
     r[x].real = 3
@@ -119,11 +168,12 @@ task main()
   end
 
   fill(s, 0)
-  -- Important: overwrites input/output!
+
+  var p = region(ispace(int1d, 1), fft1d.plan)
 
   print_array(r, "Input array")
 
-  var p = fft1d.make_plan(r, s)
+  fft1d.make_plan(r, s, p)
 
 
   format.println("Executing...\n")
