@@ -12,7 +12,6 @@ local c = regentlib.c
 local fftw_c = terralib.includec("fftw3.h")
 terralib.linklibrary("libfftw3.so")
 
-
 local cufft_c
 if default_foreign then
   cufft_c = terralib.includec("cufft.h")
@@ -185,17 +184,19 @@ function fft.generate_fft_interface(itype, dtype)
   if default_foreign then
     __demand(__cuda, __leaf)
 
-    task make_plan_gpu(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), address_space : c.legion_address_space_t) : cufft_c.cufftHandle
+    task make_plan_gpu(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan), address_space : c.legion_address_space_t) : cufft_c.cufftHandle
     
-    where reads writes(input, output) do
+    where reads writes(input, output, plan) do
       format.println("In iface.make_plan_gpu...")
+
+      var p = iface.get_plan(plan, false)
 
       --Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
       var proc = get_executing_processor(__runtime())
 
       format.println("Make_Plan_GPU: TOC PROC IS {}",c.TOC_PROC)
 
-      format.println("Make_Plan_GPU: Proccessor kind is {}", c.legion_processor_kind(proc))
+      format.println("Make_Plan_GPU: Processor kind is {}", c.legion_processor_kind(proc))
 
       if c.legion_processor_kind(proc) == c.TOC_PROC then
         var i = c.legion_processor_address_space(proc)
@@ -211,7 +212,7 @@ function fft.generate_fft_interface(itype, dtype)
         var cufft_p : cufft_c.cufftHandle
 
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch)
-        var ok = cufft_c.cufftPlanMany(&cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+        var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
         format.println("Returning cufft_p: GPU identified within make_plan_gpu")
         return cufft_p
@@ -225,7 +226,7 @@ function fft.generate_fft_interface(itype, dtype)
   
 
   __demand(__inline)
-  task iface.make_plan(input : region(ispace(itype), complex64),output : region(ispace(itype), complex64), plan : region(ispace(int1d), iface.plan))
+  task iface.make_plan(input : region(ispace(itype), dtype),output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads writes(input, output, plan) do
     format.println("In iface.make_plan...")
 
@@ -261,7 +262,7 @@ function fft.generate_fft_interface(itype, dtype)
           format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
           if iface.get_num_local_gpus() > 0 then
             format.println("GPUs identified: calling make_plan_gpu...")
-            p.cufft_p = make_plan_gpu(input, output, address_space)
+            p.cufft_p = make_plan_gpu(input, output, plan, address_space)
           end
         end
       else
