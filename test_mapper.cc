@@ -16,6 +16,7 @@
 #include "test_mapper.h"
 
 #include "mappers/default_mapper.h"
+#include "logging_mapper.h"
 
 using namespace Legion;
 using namespace Legion::Mapping;
@@ -24,10 +25,9 @@ using namespace Legion::Mapping;
 /// Mapper
 ///
 
-
-
 static LegionRuntime::Logger::Category log_fft_test_mapper("fft_test_mapper");
 
+//extend Default mapper
 class FFTTestMapper : public DefaultMapper
 {
 public:
@@ -42,6 +42,7 @@ FFTTestMapper::FFTTestMapper(MapperRuntime *rt, Machine machine, Processor local
 
 Memory FFTTestMapper::default_policy_select_target_memory(MapperContext ctx, Processor target_proc, const RegionRequirement &req) {  
   //Use zero copy memory for every processor
+  //return Memory::Z_COPY_MEM;
   return Utilities::MachineQueryInterface::find_memory_kind(machine, target_proc, Memory::Z_COPY_MEM);
 }
 
@@ -50,9 +51,9 @@ static void create_mappers(Machine machine, Runtime *runtime, const std::set<Pro
   for (std::set<Processor>::const_iterator it = local_procs.begin();
         it != local_procs.end(); it++)
   {
-    FFTTestMapper* mapper = new FFTTestMapper(runtime->get_mapper_runtime(),
-                                        machine, *it, "fft_test_mapper");
-    runtime->replace_default_mapper(mapper, *it);
+    FFTTestMapper* mapper = new FFTTestMapper(runtime->get_mapper_runtime(), machine, *it, "fft_test_mapper");
+    //LoggingWrapper mapper = new LoggingWrapper(new FFTTestMapper(runtime->get_mapper_runtime(), machine, *it, "fft_test_mapper"));
+    runtime->replace_default_mapper((new LoggingWrapper(mapper)), *it);
   }
 }
 

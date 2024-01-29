@@ -211,6 +211,8 @@ function fft.generate_fft_interface(itype, dtype)
       
         var cufft_p : cufft_c.cufftHandle
 
+        format.println("Calling cufftPlanMany...")
+
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch)
         var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
