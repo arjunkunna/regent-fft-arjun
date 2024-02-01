@@ -41,7 +41,7 @@ function fft.generate_fft_interface(itype, dtype)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  assert(dtype == complex64, "currently only complex64 is supported")
+  --assert(dtype == complex64, "currently only complex64 is supported")
 
   local iface = {}
 
@@ -206,15 +206,24 @@ function fft.generate_fft_interface(itype, dtype)
         var input_base = get_base(rect_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
 
         var output_base = get_base(rect_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
-        
+        var lo = input.ispace.bounds.lo:to_point()
+        var hi = input.ispace.bounds.hi:to_point()
         var n : int[dim]
+        ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
       
         var cufft_p : cufft_c.cufftHandle
 
         format.println("Calling cufftPlanMany...")
 
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch)
+
         var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+
+        if ok == cufft_c.CUFFT_INVALID_VALUE then
+          format.println("Invalid value in cufftplanmany")
+        end
+
+        format.println("CufftPlanMany returned {}", ok)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
         format.println("Returning cufft_p: GPU identified within make_plan_gpu")
         return cufft_p
@@ -339,23 +348,39 @@ where reads (input) do
   format.println("]\n")
 end
 
-local fft1d = fft.generate_fft_interface(int1d, complex64)
+
+task print__cufft_array(input : region(ispace(int1d), cufft_c.cufftComplex), arrayName: rawstring)
+where reads (input) do
+  format.println("\n{}, = [", arrayName)
+  for x in input do
+    var currComplex = input[x]
+    format.println("{} + {}j, ", currComplex.x, currComplex.y)
+  end
+  format.println("]\n")
+end
+
+local fft1d = fft.generate_fft_interface(int1d, cufft_c.cufftComplex)
 
 --demand(__inline)
 task test1d()
   format.println("Running test1d...")
 
   format.println("Creating input and output arrays...")
-  var r = region(ispace(int1d, 3), complex64)
-  var s = region(ispace(int1d, 3), complex64)
+  var r = region(ispace(int1d, 3), cufft_c.cufftComplex)
+  var s = region(ispace(int1d, 3), cufft_c.cufftComplex)
 
   -- Initialize input and output arrays
   for x in r do
-    r[x].real = 3
-    r[x].imag = 3
+    r[x].x = 3
+    r[x].y = 3
   end
-  fill(s, 0)
-  print_array(r, "Input array")
+
+  for x in s do
+    s[x].x = 0
+    s[x].y = 0
+  end
+  --fill(s, 0)
+  print__cufft_array(r, "Input array")
 
   -- Initial plan region
   var p = region(ispace(int1d, 1), fft1d.plan)
@@ -368,7 +393,7 @@ task test1d()
   fft1d.execute_plan_task(r, s, p)
 
 
-  print_array(s, "Output array")
+  print__cufft_array(s, "Output array")
 
   -- Destroy plan
   format.println("Calling destroy_plan...\n")
@@ -379,4 +404,5 @@ task main()
  test1d()
 end
 
+--regentlib.start(main)
 regentlib.start(main, cmapper.register_mappers)

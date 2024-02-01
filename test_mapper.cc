@@ -18,6 +18,8 @@
 #include "mappers/default_mapper.h"
 #include "logging_mapper.h"
 
+#include "realm/logging.h"
+
 using namespace Legion;
 using namespace Legion::Mapping;
 
@@ -32,7 +34,7 @@ class FFTTestMapper : public DefaultMapper
 {
 public:
   FFTTestMapper(MapperRuntime *rt, Machine machine, Processor local, const char *mapper_name);
-  virtual Memory default_policy_select_target_memory(MapperContext ctx, Processor target_proc, const RegionRequirement &req);
+  virtual Memory default_policy_select_target_memory(MapperContext ctx, Processor target_proc, const RegionRequirement &req, MemoryConstraint mc = MemoryConstraint());
 };
 
 //Constructor
@@ -40,7 +42,8 @@ FFTTestMapper::FFTTestMapper(MapperRuntime *rt, Machine machine, Processor local
 {
 }
 
-Memory FFTTestMapper::default_policy_select_target_memory(MapperContext ctx, Processor target_proc, const RegionRequirement &req) {  
+Memory FFTTestMapper::default_policy_select_target_memory(MapperContext ctx, Processor target_proc, const RegionRequirement &req, MemoryConstraint mc) 
+{  
   //Use zero copy memory for every processor
   //return Memory::Z_COPY_MEM;
   return Utilities::MachineQueryInterface::find_memory_kind(machine, target_proc, Memory::Z_COPY_MEM);
