@@ -41,7 +41,7 @@ function fft.generate_fft_interface(itype, dtype)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  --assert(dtype == complex64, "currently only complex64 is supported")
+  assert(dtype == complex64, "currently only complex64 is supported")
 
   local iface = {}
 
@@ -215,7 +215,7 @@ function fft.generate_fft_interface(itype, dtype)
 
         format.println("Calling cufftPlanMany...")
 
-        --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch)
+        --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
 
         var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
 
@@ -299,6 +299,7 @@ function fft.generate_fft_interface(itype, dtype)
     if c.legion_processor_kind(proc) == c.TOC_PROC then
       c.printf("execute plan via cuFFT\n")
       --cufftResult cufftExecC2C(cufftHandle plan, cufftComplex *idata, cufftComplex *odata, int direction);
+
       cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
 
     else
@@ -311,7 +312,7 @@ function fft.generate_fft_interface(itype, dtype)
   task iface.execute_plan_task(input : region(ispace(itype), dtype),
                                output : region(ispace(itype), dtype),
                                plan : region(ispace(int1d), iface.plan))
-  where reads(input, plan), writes(output) do
+  where reads(input, plan), reads writes(output) do
     iface.execute_plan(input, output, plan)
   end
 
@@ -338,6 +339,7 @@ function fft.generate_fft_interface(itype, dtype)
 end
 
 -- Task to print out input or output array. Takes a region and a string representing the name of the array
+__demand(__inline, __leaf)
 task print_array(input : region(ispace(int1d), complex64), arrayName: rawstring)
 where reads (input) do
   format.println("\n{}, = [", arrayName)
@@ -349,7 +351,7 @@ where reads (input) do
 end
 
 
-task print__cufft_array(input : region(ispace(int1d), cufft_c.cufftComplex), arrayName: rawstring)
+task print_cufft_array(input : region(ispace(int1d), cufft_c.cufftComplex), arrayName: rawstring)
 where reads (input) do
   format.println("\n{}, = [", arrayName)
   for x in input do
@@ -359,28 +361,24 @@ where reads (input) do
   format.println("]\n")
 end
 
-local fft1d = fft.generate_fft_interface(int1d, cufft_c.cufftComplex)
+local fft1d = fft.generate_fft_interface(int1d, complex64)
 
 --demand(__inline)
 task test1d()
   format.println("Running test1d...")
 
   format.println("Creating input and output arrays...")
-  var r = region(ispace(int1d, 3), cufft_c.cufftComplex)
-  var s = region(ispace(int1d, 3), cufft_c.cufftComplex)
+  var r = region(ispace(int1d, 3), complex64)
+  var s = region(ispace(int1d, 3), complex64)
 
   -- Initialize input and output arrays
   for x in r do
-    r[x].x = 3
-    r[x].y = 3
+    r[x].real = 3
+    r[x].imag = 3
   end
 
-  for x in s do
-    s[x].x = 0
-    s[x].y = 0
-  end
-  --fill(s, 0)
-  print__cufft_array(r, "Input array")
+  fill(s, 0)
+  print_array(r, "Input array")
 
   -- Initial plan region
   var p = region(ispace(int1d, 1), fft1d.plan)
@@ -393,7 +391,7 @@ task test1d()
   fft1d.execute_plan_task(r, s, p)
 
 
-  print__cufft_array(s, "Output array")
+  print_array(s, "Output array")
 
   -- Destroy plan
   format.println("Calling destroy_plan...\n")
