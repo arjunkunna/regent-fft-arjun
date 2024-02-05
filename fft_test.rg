@@ -215,9 +215,12 @@ function fft.generate_fft_interface(itype, dtype)
 
         format.println("Calling cufftPlanMany...")
 
+        --var ok = cufftPlan1d(cufftHandle *plan, int nx, cufftType type, int batch);
+        -- hardcoding value of 3 for now to correspond to output
+        var ok = cufft_c.cufftPlan1d(&p.cufft_p, 3, cufft_c.CUFFT_C2C, 1);
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
 
-        var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+        --var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
 
         if ok == cufft_c.CUFFT_INVALID_VALUE then
           format.println("Invalid value in cufftplanmany")
@@ -226,7 +229,7 @@ function fft.generate_fft_interface(itype, dtype)
         format.println("CufftPlanMany returned {}", ok)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
         format.println("Returning cufft_p: GPU identified within make_plan_gpu")
-        return cufft_p
+        return p.cufft_p
 
       else 
         format.println("GPU processor not identified: TOC_PROC not equal to processor kind")
@@ -300,7 +303,20 @@ function fft.generate_fft_interface(itype, dtype)
       c.printf("execute plan via cuFFT\n")
       --cufftResult cufftExecC2C(cufftHandle plan, cufftComplex *idata, cufftComplex *odata, int direction);
 
-      cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+      var ok = cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+
+
+      if ok == cufft_c.CUFFT_INVALID_VALUE then
+          format.println("Invalid value in cufftplanmany")
+      end
+
+      if ok == cufft_c.CUFFT_INVALID_PLAN then
+          format.println("Invalid plan passed to cufftExecC2C")
+      end
+
+      format.println("cufftExecC2C returned {}", ok)
+      regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftExecC2C failed")
+      format.println("cufftExecC2C successful")
 
     else
       c.printf("execute plan via FFTW\n")
@@ -385,6 +401,8 @@ task test1d()
   
   --format.println("Calling make_plan...")
   fft1d.make_plan(r, s, p)
+
+  print_array(r, "Input array")
 
   -- Execute plan
   format.println("Calling execute_plan...\n")
