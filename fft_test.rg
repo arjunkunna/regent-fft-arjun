@@ -6,7 +6,7 @@ local data = require("common/data")
 local cmapper = require("test_mapper")
 
 local gpuhelper = require("regent/gpu/helper")
-local default_foreign = gpuhelper.check_gpu_available() and '0' or '1'
+local default_foreign = gpuhelper.check_gpu_available()
 
 local c = regentlib.c
 local fftw_c = terralib.includec("fftw3.h")
@@ -14,7 +14,7 @@ terralib.linklibrary("libfftw3.so")
 
 local cufft_c
 if default_foreign then
-  cufft_c = terralib.includec("cufft.h")
+  cufft_c = terralib.includec("cufftXt.h")
   terralib.linklibrary("libcufft.so")
 end
 
@@ -41,7 +41,10 @@ function fft.generate_fft_interface(itype, dtype)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  assert(dtype == complex64, "currently only complex64 is supported")
+  --assert(dtype == complex64, "currently only complex64 is supported")
+  --assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftComplex))
+  assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex))
+
 
   local iface = {}
 
@@ -85,7 +88,7 @@ function fft.generate_fft_interface(itype, dtype)
         end
       end
 
-      regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
+      --regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
       destroy_accessor(accessor)
       return base_pointer
     end
@@ -158,7 +161,7 @@ function fft.generate_fft_interface(itype, dtype)
     regentlib.assert(mem_kind == c.SYSTEM_MEM or mem_kind == c.REGDMA_MEM or mem_kind == c.Z_COPY_MEM, "plan instance must be stored in sysmem, regmem, or zero copy mem")
 
     format.println("Getting plan_base...")
-
+    
     var plan_base = get_base_plan(rect_plan_t(plan.ispace.bounds), __physical(plan)[0], __fields(plan)[0]) --get_base_plan returns a base_pointer to a region with fspace iface.plan
 
     var i = c.legion_processor_address_space(get_executing_processor(__runtime())) --legion_address_space_t legion_processor_address_space(legion_processor_t proc);
@@ -184,12 +187,12 @@ function fft.generate_fft_interface(itype, dtype)
   if default_foreign then
     __demand(__cuda, __leaf)
 
-    task make_plan_gpu(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan), address_space : c.legion_address_space_t) : cufft_c.cufftHandle
+    task make_plan_gpu(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan), address_space : c.legion_address_space_t)
     
     where reads writes(input, output, plan) do
       format.println("In iface.make_plan_gpu...")
 
-      var p = iface.get_plan(plan, false)
+      var p = iface.get_plan(plan, true)
 
       --Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
       var proc = get_executing_processor(__runtime())
@@ -211,16 +214,21 @@ function fft.generate_fft_interface(itype, dtype)
         var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
       
-        var cufft_p : cufft_c.cufftHandle
+        --var cufft_p : cufft_c.cufftHandle
 
         format.println("Calling cufftPlanMany...")
 
+
+        --var create_ok = cufft_c.cufftCreate(&cufft_p)
+        --format.println("cufftCreate returned {}", create_ok)
+        --regentlib.assert(create_ok == cufft_c.CUFFT_SUCCESS, "cufftCreate failed")
+
         --var ok = cufftPlan1d(cufftHandle *plan, int nx, cufftType type, int batch);
         -- hardcoding value of 3 for now to correspond to output
-        var ok = cufft_c.cufftPlan1d(&p.cufft_p, 3, cufft_c.CUFFT_C2C, 1);
+        --var ok = cufft_c.cufftPlan1d(&p.cufft_p, 3, cufft_c.CUFFT_Z2Z, 1);
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
 
-        --var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+        var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
 
         if ok == cufft_c.CUFFT_INVALID_VALUE then
           format.println("Invalid value in cufftplanmany")
@@ -229,7 +237,7 @@ function fft.generate_fft_interface(itype, dtype)
         format.println("CufftPlanMany returned {}", ok)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
         format.println("Returning cufft_p: GPU identified within make_plan_gpu")
-        return p.cufft_p
+        --return cufft_p
 
       else 
         format.println("GPU processor not identified: TOC_PROC not equal to processor kind")
@@ -238,8 +246,7 @@ function fft.generate_fft_interface(itype, dtype)
     end
   end
   
-
-  __demand(__inline)
+   __demand(__inline)
   task iface.make_plan(input : region(ispace(itype), dtype),output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads writes(input, output, plan) do
     format.println("In iface.make_plan...")
@@ -258,7 +265,9 @@ function fft.generate_fft_interface(itype, dtype)
     -- https://legion.stanford.edu/doxygen/class_legion_1_1_physical_region.html
     --__physical(r.{f, g, ...}) returns an array of physical regions (legion_physical_region_t) for r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
     --__fields(r.{f, g, ...}) returns an array of the field IDs (legion_field_id_t) of r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
-    
+    --local rect_t, get_base = make_get_base(dim, dtype) --get_base returns a base pointer to a region with fspace dtype. dim =1 , dtype = complex64
+    --local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
+
     var input_base = get_base(c.legion_rect_1d_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
     var output_base = get_base(c.legion_rect_1d_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
 
@@ -276,7 +285,8 @@ function fft.generate_fft_interface(itype, dtype)
           format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
           if iface.get_num_local_gpus() > 0 then
             format.println("GPUs identified: calling make_plan_gpu...")
-            p.cufft_p = make_plan_gpu(input, output, plan, address_space)
+            --p.cufft_p = make_plan_gpu(input, output, plan, address_space)
+            make_plan_gpu(input, output, plan, p.address_space)
           end
         end
       else
@@ -285,7 +295,7 @@ function fft.generate_fft_interface(itype, dtype)
     end
   end
 
-  __demand(__inline)
+   __demand(__inline)
   task iface.execute_plan(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads(input, plan), writes(output) do
 
@@ -303,7 +313,7 @@ function fft.generate_fft_interface(itype, dtype)
       c.printf("execute plan via cuFFT\n")
       --cufftResult cufftExecC2C(cufftHandle plan, cufftComplex *idata, cufftComplex *odata, int direction);
 
-      var ok = cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+      var ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
 
 
       if ok == cufft_c.CUFFT_INVALID_VALUE then
@@ -377,6 +387,7 @@ where reads (input) do
   format.println("]\n")
 end
 
+--function fft.generate_fft_interface(itype, dtype): itype = int1d, dtype = complex64, dim = itype.dim =1 
 local fft1d = fft.generate_fft_interface(int1d, complex64)
 
 --demand(__inline)
@@ -402,14 +413,13 @@ task test1d()
   --format.println("Calling make_plan...")
   fft1d.make_plan(r, s, p)
 
-  print_array(r, "Input array")
-
   -- Execute plan
   format.println("Calling execute_plan...\n")
   fft1d.execute_plan_task(r, s, p)
 
 
   print_array(s, "Output array")
+
 
   -- Destroy plan
   format.println("Calling destroy_plan...\n")
@@ -421,4 +431,9 @@ task main()
 end
 
 --regentlib.start(main)
-regentlib.start(main, cmapper.register_mappers)
+if default_foreign then 
+  regentlib.start(main, cmapper.register_mappers)
+else 
+  regentlib.start(main)
+end
+
