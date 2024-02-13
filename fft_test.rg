@@ -295,6 +295,54 @@ function fft.generate_fft_interface(itype, dtype)
     end
   end
 
+  task iface.make_plan_task(input : region(ispace(itype), dtype),
+                            output : region(ispace(itype), dtype),
+                            plan : region(ispace(int1d), iface.plan))
+  where reads writes(input, output, plan) do
+    iface.make_plan(input, output, plan)
+  end
+
+  __demand(__inline)
+  task iface.make_plan_distrib(input : region(ispace(itype), dtype),
+                               input_part : partition(disjoint, input, ispace(int1d)),
+                               output : region(ispace(itype), dtype),
+                               output_part : partition(disjoint, output, ispace(int1d)),
+                               plan : region(ispace(int1d), iface.plan),
+                               plan_part : partition(disjoint, plan, ispace(int1d)))
+  where reads writes(input, output, plan) do
+    var n = iface.get_num_nodes()
+    regentlib.assert(input_part.colors.bounds.hi - input_part.colors.bounds.lo + 1 == int1d(n), "input_part colors size must be equal to the number of nodes")
+    regentlib.assert(input_part.colors.bounds == output_part.colors.bounds, "input_part and output_part colors must be equal")
+    regentlib.assert(input_part.colors.bounds == plan_part.colors.bounds, "input_part and plan_part colors must be equal")
+
+    var p : iface.plan
+    p.p = [fftw_c.fftw_plan](0)
+    p.address_space
+
+    --rescape 
+    --  if default_foreign then
+    --    remit requote
+    --      p.cufft_p = 0
+    --    end
+    --  else
+    --    return rquote end
+    --  end
+    --end
+    ;[(function() if use_cuda then return rquote p.cufft_p = 0 end else return rquote end end end)()]
+    fill(plan, p)
+
+    __demand(__index_launch)
+    for i in plan_part.colors do
+      iface.make_plan_task(input_part[i], output_part[i], plan_part[i])
+    end
+  end
+
+
+
+
+
+
+
    __demand(__inline)
   task iface.execute_plan(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads(input, plan), writes(output) do
@@ -359,6 +407,21 @@ function fft.generate_fft_interface(itype, dtype)
     
     c.printf("Destroy plan via FFTW\n")
     fftw_c.fftw_destroy_plan(p.p)
+  end
+
+
+  task iface.destroy_plan_task(plan : region(ispace(int1d), iface.plan))
+  where reads writes(plan) do
+    iface.destroy_plan(plan)
+  end
+
+  __demand(__inline)
+  task iface.destroy_plan_distrib(plan : region(ispace(int1d), iface.plan),
+                                  plan_part : partition(disjoint, plan, ispace(int1d)))
+  where reads writes(plan) do
+    for i in plan_part.colors do
+      iface.destroy_plan_task(plan_part[i])
+    end
   end
 
   return iface
@@ -426,8 +489,42 @@ task test1d()
   fft1d.destroy_plan(p)
 end
 
+
+
+__demand(__inline)
+task test1d_distrib()
+  var n = fft1d.get_num_nodes()
+  format.println("Num nodes in distrib is {}...", n)
+  var r = region(ispace(int1d, 3*n), complex64)
+  var r_part = partition(equal, r, ispace(int1d, n))
+  var s = region(ispace(int1d, 3*n), complex64)
+  var s_part = partition(equal, s, ispace(int1d, n))
+  for x in r do
+    r[x].real = 4
+    r[x].imag = 4
+  end
+  fill(s, 0)
+  print_array(r, "Input array for distrib")
+  var p = region(ispace(int1d, n), fft1d.plan)
+  var p_part = partition(equal, p, ispace(int1d, n))
+  -- Important: this overwrites r and s!
+  fft1d.make_plan_distrib(r, r_part, s, s_part, p, p_part)
+  __demand(__index_launch)
+  for i in r_part.colors do
+    fft1d.execute_plan_task(r_part[i], s_part[i], p)
+  end
+  print_array(s, "Output array for distrib")
+  fft1d.destroy_plan_distrib(p, p_part)
+end
+
 task main()
  test1d()
+end
+
+
+task main()
+ test1d()
+ test1d_distrib()
 end
 
 --regentlib.start(main)
