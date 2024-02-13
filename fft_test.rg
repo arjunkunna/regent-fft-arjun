@@ -8,10 +8,12 @@ local cmapper = require("test_mapper")
 local gpuhelper = require("regent/gpu/helper")
 local default_foreign = gpuhelper.check_gpu_available()
 
+--Import C and FFTW APIs
 local c = regentlib.c
 local fftw_c = terralib.includec("fftw3.h")
 terralib.linklibrary("libfftw3.so")
 
+--Import cuFFT API
 local cufft_c
 if default_foreign then
   cufft_c = terralib.includec("cufftXt.h")
@@ -22,7 +24,6 @@ end
 --Hack: get defines from fftw3.h
 fftw_c.FFTW_FORWARD = -1
 fftw_c.FFTW_BACKWARD = 1
-
 fftw_c.FFTW_MEASURE = 0
 fftw_c.FFTW_DESTROY_INPUT = (2 ^ 0)
 fftw_c.FFTW_UNALIGNED = (2 ^ 1)
@@ -36,18 +37,19 @@ fftw_c.FFTW_WISDOM_ONLY = (2 ^ 21)
 
 local fft = {}
 
---itype should be the index type of the transform (int1d/int2d for 2d) and dtype = complex64
+--itype should be the index type of the transform (int1d for 1d/int2d for 2d) and dtype = complex64
 function fft.generate_fft_interface(itype, dtype)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  --assert(dtype == complex64, "currently only complex64 is supported")
-  --assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftComplex))
-  assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex))
+  assert(dtype == complex64, "currently only complex64 is supported")
+  assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftDoubleComplex), "Structure used in transform has to match complex64 size")
+  assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex),"Structure used in transform has to match complex64 size")
 
 
   local iface = {}
 
+  -- Create fspaces depending on whether GPUs are used or not
   local iface_plan
   if default_foreign then 
     fspace iface_plan {
@@ -55,6 +57,7 @@ function fft.generate_fft_interface(itype, dtype)
       cufft_p : cufft_c.cufftHandle,
       address_space : c.legion_address_space_t,
     }
+
   else
     fspace iface_plan {
       p : fftw_c.fftw_plan,
@@ -65,7 +68,7 @@ function fft.generate_fft_interface(itype, dtype)
   iface.plan = iface_plan
   iface.plan.__no_field_slicing = true -- don't field slice this struct
      
-  -- d is dimension, t is dtype/region fspace (complex 64)   Í
+  -- d is dimension, t is dtype/region fspace (complex 64)
   local function make_get_base(d, t)
 
     local rect_t = c["legion_rect_" .. d .. "d_t"]
@@ -73,7 +76,7 @@ function fft.generate_fft_interface(itype, dtype)
     local raw_rect_ptr = c["legion_accessor_array_" .. d .. "d_raw_rect_ptr"]
     local destroy_accessor = c["legion_accessor_array_" .. d .. "d_destroy"]
 
-    --Function to get base pointer of region
+    --Function to get base pointer of region: returns base_pointer
     local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
       var subrect : rect_t
       var offsets : c.legion_byte_offset_t[d]
@@ -88,14 +91,15 @@ function fft.generate_fft_interface(itype, dtype)
         end
       end
 
-      --regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
+      regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
       destroy_accessor(accessor)
       return base_pointer
     end
 
     return rect_t, get_base
   end
-  local rect_plan_t, get_base_plan = make_get_base(1, iface.plan) --get_base_plan returns a base_pointer to a region with fspace iface.plan
+
+  local rect_plan_t, get_base_plan = make_get_base(1, iface.plan) --get_base_plan returns a base_pointer to a region with fspace iface.plan. (always dim = 1 because plan regions are dim 1: 'var p = region(ispace(int1d, 1), fft1d.plan)')
   local rect_t, get_base = make_get_base(dim, dtype) --get_base returns a base pointer to a region with fspace dtype
 
   -- Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
@@ -147,10 +151,8 @@ function fft.generate_fft_interface(itype, dtype)
    __demand(__inline)
   task iface.get_plan(plan : region(ispace(int1d), iface.plan), check : bool) : &iface.plan
   where reads(plan) do
-    format.println("In get_plan...")
+    format.println("In get_plan task...")
 
-
-    --Hack: 3Bneed to use raw access to circument CUDA checker here.
     --__physical(r.{f, g, ...}) returns an array of physical regions (legion_physical_region_t) for r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
     var pr = __physical(plan)[0] --returns first physical region?
 
@@ -527,10 +529,5 @@ task main()
  test1d_distrib()
 end
 
---regentlib.start(main)
-if default_foreign then 
-  regentlib.start(main, cmapper.register_mappers)
-else 
-  regentlib.start(main)
-end
 
+regentlib.start(main, cmapper.register_mappers)

@@ -46,7 +46,15 @@ Memory FFTTestMapper::default_policy_select_target_memory(MapperContext ctx, Pro
 {  
   //Use zero copy memory for every processor
   //return Memory::Z_COPY_MEM;
-  return Utilities::MachineQueryInterface::find_memory_kind(machine, target_proc, Memory::Z_COPY_MEM);
+  Memory result = Utilities::MachineQueryInterface::find_memory_kind(machine, target_proc, Memory::Z_COPY_MEM);
+
+  // Check if the result is valid
+  if (result.exists()) {
+    return result;
+  } else {
+    // If result is not valid, fall back to DefaultMapper's logic
+    return DefaultMapper::default_policy_select_target_memory(ctx, target_proc, req, mc);
+  }
 }
 
 static void create_mappers(Machine machine, Runtime *runtime, const std::set<Processor> &local_procs)
