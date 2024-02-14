@@ -65,6 +65,7 @@ function fft.generate_fft_interface(itype, dtype)
     }
   end
   
+  --Store plan fspace in our interface
   iface.plan = iface_plan
   iface.plan.__no_field_slicing = true -- don't field slice this struct
      
@@ -142,34 +143,38 @@ function fft.generate_fft_interface(itype, dtype)
     return iface.get_tunable(DEFAULT_TUNABLE_NODE_COUNT)
   end
 
-
   __demand(__inline)
   task iface.get_num_local_gpus()
     return iface.get_tunable(DEFAULT_TUNABLE_LOCAL_GPUS)
   end
 
+
+
+
+
+
+  --Task to return pointer to plan. Takes plan region and returns pointer to plan
    __demand(__inline)
   task iface.get_plan(plan : region(ispace(int1d), iface.plan), check : bool) : &iface.plan
   where reads(plan) do
-    format.println("In get_plan task...")
+    format.println("In get_plan...")
 
+    --Get physical region
     --__physical(r.{f, g, ...}) returns an array of physical regions (legion_physical_region_t) for r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
-    var pr = __physical(plan)[0] --returns first physical region?
+    var pr = __physical(plan)[0] --returns first physical region
 
     regentlib.assert(c.legion_physical_region_get_memory_count(pr) == 1, "plan instance has more than one memory?")
     
+    --Ensure that plan is in the right kind of memory
     var mem_kind = c.legion_memory_kind(c.legion_physical_region_get_memory(pr, 0)) --legion_memory_t legion_physical_region_get_memory(legion_physical_region_t handle, size_t index); --legion_memory_kind_t legion_memory_kind(legion_memory_t mem);
-
     regentlib.assert(mem_kind == c.SYSTEM_MEM or mem_kind == c.REGDMA_MEM or mem_kind == c.Z_COPY_MEM, "plan instance must be stored in sysmem, regmem, or zero copy mem")
 
+    --Get pointer to plan: get_base_plan returns a base_pointer to a region with fspace iface.plan
     format.println("Getting plan_base...")
-    
     var plan_base = get_base_plan(rect_plan_t(plan.ispace.bounds), __physical(plan)[0], __fields(plan)[0]) --get_base_plan returns a base_pointer to a region with fspace iface.plan
-
     var i = c.legion_processor_address_space(get_executing_processor(__runtime())) --legion_address_space_t legion_processor_address_space(legion_processor_t proc);
 
     var p : &iface.plan
-
     var bounds = plan.ispace.bounds
 
     --T(x) is a cast from type T to a value x: int1d(1) = number 1 (casted to type int1d)
@@ -178,6 +183,7 @@ function fft.generate_fft_interface(itype, dtype)
     else
       p = plan_base
     end
+
     regentlib.assert(not check or p.address_space == i, "plans can only be used on the node where they are originally created")
     format.println("Returning plan_base...")
     return p
@@ -185,6 +191,14 @@ function fft.generate_fft_interface(itype, dtype)
 
   local plan_dft = fftw_c["fftw_plan_dft_" .. dim .. "d"]
 
+
+
+
+
+
+  ----MAKE PLAN FUNCTIONS----
+  
+  --task: Make plan in GPU version. Stores plan in cufft_p
   local make_plan_gpu
   if default_foreign then
     __demand(__cuda, __leaf)
@@ -194,52 +208,40 @@ function fft.generate_fft_interface(itype, dtype)
     where reads writes(input, output, plan) do
       format.println("In iface.make_plan_gpu...")
 
+      --Get pointer to plan
       var p = iface.get_plan(plan, true)
 
-      --Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
+      --Verify we are in GPU mode by checking TOC_PROC
+      -Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
       var proc = get_executing_processor(__runtime())
-
       format.println("Make_Plan_GPU: TOC PROC IS {}",c.TOC_PROC)
-
       format.println("Make_Plan_GPU: Processor kind is {}", c.legion_processor_kind(proc))
 
       if c.legion_processor_kind(proc) == c.TOC_PROC then
         var i = c.legion_processor_address_space(proc)
-
         regentlib.assert(address_space == i, "make_plan_gpu must be executed on a processor in the same address space")
 
+        --Get input and output bases
         var input_base = get_base(rect_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
-
         var output_base = get_base(rect_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
         var lo = input.ispace.bounds.lo:to_point()
         var hi = input.ispace.bounds.hi:to_point()
         var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
       
-        --var cufft_p : cufft_c.cufftHandle
 
-        format.println("Calling cufftPlanMany...")
-
-
-        --var create_ok = cufft_c.cufftCreate(&cufft_p)
-        --format.println("cufftCreate returned {}", create_ok)
-        --regentlib.assert(create_ok == cufft_c.CUFFT_SUCCESS, "cufftCreate failed")
-
-        --var ok = cufftPlan1d(cufftHandle *plan, int nx, cufftType type, int batch);
-        -- hardcoding value of 3 for now to correspond to output
-        --var ok = cufft_c.cufftPlan1d(&p.cufft_p, 3, cufft_c.CUFFT_Z2Z, 1);
+        --Call cufftPlanMany
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
-
+        format.println("Calling cufftPlanMany...")
         var ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
 
+        --Check return value of cufftPlanMany
         if ok == cufft_c.CUFFT_INVALID_VALUE then
           format.println("Invalid value in cufftplanmany")
         end
 
-        format.println("CufftPlanMany returned {}", ok)
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
-        format.println("Returning cufft_p: GPU identified within make_plan_gpu")
-        --return cufft_p
+        format.println("cufftPlanMany Successful")
 
       else 
         format.println("GPU processor not identified: TOC_PROC not equal to processor kind")
@@ -248,18 +250,21 @@ function fft.generate_fft_interface(itype, dtype)
     end
   end
   
+  --Takes input, output, and plan regions and makes plan using cufft/FFTW functions
    __demand(__inline)
   task iface.make_plan(input : region(ispace(itype), dtype),output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads writes(input, output, plan) do
     format.println("In iface.make_plan...")
 
+    --Get plan returns pointer to plan
     format.println("Calling get_plan...")
     var p = iface.get_plan(plan, false)
 
 
-    --get_executing process: takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
+    --Get_executing process: takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
     var address_space = c.legion_processor_address_space(get_executing_processor(__runtime())) --legion_processor_address_space: takes a legion_processor_t proc and returns a legion_address_space_t
 
+    --Check input/output bounds. Bounds example: 
     --var is = ispace(int1d, 12, -1)
     --is.bounds -- returns rect1d { lo = int1d(-1), hi = int1d(10) }
     regentlib.assert(input.ispace.bounds == output.ispace.bounds, "input and output regions must be identical in size")
@@ -270,24 +275,24 @@ function fft.generate_fft_interface(itype, dtype)
     --local rect_t, get_base = make_get_base(dim, dtype) --get_base returns a base pointer to a region with fspace dtype. dim =1 , dtype = complex64
     --local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
 
+    --Get pointers to input and output regions
     var input_base = get_base(c.legion_rect_1d_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
     var output_base = get_base(c.legion_rect_1d_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
 
+    --Call fftw_c.fftw_plan_dft_1d
     -- fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags)
-    -- n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
+    --n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     format.println("Storing fftw_plan in p.p...")
     p.p = fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
     p.address_space = address_space
 
-    format.println("Default Foreign is {}", default_foreign)
-
+    --If GPUs, call make_plan_GPU
     rescape
       if default_foreign then
         remit rquote
           format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
           if iface.get_num_local_gpus() > 0 then
             format.println("GPUs identified: calling make_plan_gpu...")
-            --p.cufft_p = make_plan_gpu(input, output, plan, address_space)
             make_plan_gpu(input, output, plan, p.address_space)
           end
         end
@@ -297,40 +302,32 @@ function fft.generate_fft_interface(itype, dtype)
     end
   end
 
-  task iface.make_plan_task(input : region(ispace(itype), dtype),
-                            output : region(ispace(itype), dtype),
-                            plan : region(ispace(int1d), iface.plan))
+  task iface.make_plan_task(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads writes(input, output, plan) do
     iface.make_plan(input, output, plan)
   end
 
+  --Distribution version of make_plan
   __demand(__inline)
-  task iface.make_plan_distrib(input : region(ispace(itype), dtype),
-                               input_part : partition(disjoint, input, ispace(int1d)),
-                               output : region(ispace(itype), dtype),
-                               output_part : partition(disjoint, output, ispace(int1d)),
-                               plan : region(ispace(int1d), iface.plan),
-                               plan_part : partition(disjoint, plan, ispace(int1d)))
+  task iface.make_plan_distrib(input : region(ispace(itype), dtype), input_part : partition(disjoint, input, ispace(int1d)), output : region(ispace(itype), dtype), output_part : partition(disjoint, output, ispace(int1d)), plan : region(ispace(int1d), iface.plan), plan_part : partition(disjoint, plan, ispace(int1d)))
   where reads writes(input, output, plan) do
+    
+
+    --Get number of nodes and check consistency of nodes/colors
     var n = iface.get_num_nodes()
     regentlib.assert(input_part.colors.bounds.hi - input_part.colors.bounds.lo + 1 == int1d(n), "input_part colors size must be equal to the number of nodes")
     regentlib.assert(input_part.colors.bounds == output_part.colors.bounds, "input_part and output_part colors must be equal")
     regentlib.assert(input_part.colors.bounds == plan_part.colors.bounds, "input_part and plan_part colors must be equal")
 
     var p : iface.plan
+    --T(x) is a cast from type T to a value x
     p.p = [fftw_c.fftw_plan](0)
     p.address_space
 
-    --rescape 
-    --  if default_foreign then
-    --    remit requote
-    --      p.cufft_p = 0
-    --    end
-    --  else
-    --    return rquote end
-    --  end
-    --end
-    ;[(function() if use_cuda then return rquote p.cufft_p = 0 end else return rquote end end end)()]
+    if default_foreign then
+      p.cufft_p = 0
+    end
+
     fill(plan, p)
 
     __demand(__index_launch)
@@ -343,41 +340,46 @@ function fft.generate_fft_interface(itype, dtype)
 
 
 
+  ----EXECUTE PLAN FUNCTIONS----
 
-
+  --Task to execute plan. Calls cufftExecZ2Z if in GPU mode and fftw_execute_dft if in CPU mode
    __demand(__inline)
   task iface.execute_plan(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads(input, plan), writes(output) do
-
     format.println("In iface.execute_plan...")
-    var p = iface.get_plan(plan, true)
+
+    --Get pointer to plan
+    var p = iface.get_plan(plan, true) --task iface.get_plan(plan : region(ispace(int1d), iface.plan), check : bool) : &iface.plan
+
+    --Get pointers to input and output regions
     var input_base = get_base(rect_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
     var output_base = get_base(rect_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
 
+    --Check if we are in GPU or CPU mode
     var proc = get_executing_processor(__runtime())
+    format.println("execute_plan: TOC PROC IS {}",c.TOC_PROC) --TOC = Throughput Oriented Core: Means we have a GPU
+    format.println("execute_plan: Processor kind is {}", c.legion_processor_kind(proc))
 
-    format.println("Execute plan: TOC PROC IS {}",c.TOC_PROC)
-    format.println("Execute plan: Proccessor kind is {}", c.legion_processor_kind(proc))
-
+    --If in GPU mode, usecufftExecZ2Z
     if c.legion_processor_kind(proc) == c.TOC_PROC then
       c.printf("execute plan via cuFFT\n")
-      --cufftResult cufftExecC2C(cufftHandle plan, cufftComplex *idata, cufftComplex *odata, int direction);
-
+      --cufftResult cufftExecZ2Z(cufftHandle plan, cufftDoubleComplex *idata, cufftDoubleComplex *odata, int direction)
       var ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
 
-
+      --Check return values of Exec
       if ok == cufft_c.CUFFT_INVALID_VALUE then
-          format.println("Invalid value in cufftplanmany")
+          format.println("Invalid value in cufftExecZ2Z")
       end
 
       if ok == cufft_c.CUFFT_INVALID_PLAN then
-          format.println("Invalid plan passed to cufftExecC2C")
+          format.println("Invalid plan passed to cufftExecZ2Z")
       end
 
-      format.println("cufftExecC2C returned {}", ok)
-      regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftExecC2C failed")
-      format.println("cufftExecC2C successful")
+      --format.println("cufftExecZ2Z returned {}", ok)
+      regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftExecZ2Z failed")
+      format.println("cufftExecZ2Z successful")
 
+    --Otherwise, use FFTW if no GPU
     else
       c.printf("execute plan via FFTW\n")
       fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
@@ -385,28 +387,34 @@ function fft.generate_fft_interface(itype, dtype)
   end
 
   __demand(__cuda, __leaf)
-  task iface.execute_plan_task(input : region(ispace(itype), dtype),
-                               output : region(ispace(itype), dtype),
-                               plan : region(ispace(int1d), iface.plan))
+  task iface.execute_plan_task(input : region(ispace(itype), dtype), output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
   where reads(input, plan), reads writes(output) do
     iface.execute_plan(input, output, plan)
   end
 
+
+
+  ----DESTROY PLAN FUNCTIONS----
+
+  --Task to destroy plan. Takes plan region as argument.
   __demand(__inline)
   task iface.destroy_plan(plan : region(ispace(int1d), iface.plan))
   where reads writes(plan) do
    format.println("In iface.destroy_plan...")
 
     var p = iface.get_plan(plan, true)
+
     var proc = get_executing_processor(__runtime())
 
-
+    -- If using GPUs, call cufftDestroy
     if c.legion_processor_kind(proc) == c.TOC_PROC then
       c.printf("Destroy plan via cuFFT\n")
-      --cufftResult cufftDestroy(cufftHandle plan)
-      cufft_c.cufftDestroy(p.cufft_p)
+
+      --Function: cufftResult cufftDestroy(cufftHandle plan)
+      cufft_c.cufftDestroy(p.cufft_p) 
     end
     
+    -- Else, cal fftw_destroy
     c.printf("Destroy plan via FFTW\n")
     fftw_c.fftw_destroy_plan(p.p)
   end
@@ -417,10 +425,12 @@ function fft.generate_fft_interface(itype, dtype)
     iface.destroy_plan(plan)
   end
 
+  -- Distributed version of destroy_plan
   __demand(__inline)
-  task iface.destroy_plan_distrib(plan : region(ispace(int1d), iface.plan),
-                                  plan_part : partition(disjoint, plan, ispace(int1d)))
+  task iface.destroy_plan_distrib(plan : region(ispace(int1d), iface.plan), plan_part : partition(disjoint, plan, ispace(int1d)))
   where reads writes(plan) do
+    format.println("In iface.destroy_plan_distrib...")
+
     for i in plan_part.colors do
       iface.destroy_plan_task(plan_part[i])
     end
@@ -429,105 +439,4 @@ function fft.generate_fft_interface(itype, dtype)
   return iface
 end
 
--- Task to print out input or output array. Takes a region and a string representing the name of the array
-__demand(__inline, __leaf)
-task print_array(input : region(ispace(int1d), complex64), arrayName: rawstring)
-where reads (input) do
-  format.println("\n{}, = [", arrayName)
-  for x in input do
-    var currComplex = input[x]
-    format.println("{} + {}j, ", currComplex.real, currComplex.imag)
-  end
-  format.println("]\n")
-end
-
-
-task print_cufft_array(input : region(ispace(int1d), cufft_c.cufftComplex), arrayName: rawstring)
-where reads (input) do
-  format.println("\n{}, = [", arrayName)
-  for x in input do
-    var currComplex = input[x]
-    format.println("{} + {}j, ", currComplex.x, currComplex.y)
-  end
-  format.println("]\n")
-end
-
---function fft.generate_fft_interface(itype, dtype): itype = int1d, dtype = complex64, dim = itype.dim =1 
-local fft1d = fft.generate_fft_interface(int1d, complex64)
-
---demand(__inline)
-task test1d()
-  format.println("Running test1d...")
-
-  format.println("Creating input and output arrays...")
-  var r = region(ispace(int1d, 3), complex64)
-  var s = region(ispace(int1d, 3), complex64)
-
-  -- Initialize input and output arrays
-  for x in r do
-    r[x].real = 3
-    r[x].imag = 3
-  end
-
-  fill(s, 0)
-  print_array(r, "Input array")
-
-  -- Initial plan region
-  var p = region(ispace(int1d, 1), fft1d.plan)
-  
-  --format.println("Calling make_plan...")
-  fft1d.make_plan(r, s, p)
-
-  -- Execute plan
-  format.println("Calling execute_plan...\n")
-  fft1d.execute_plan_task(r, s, p)
-
-
-  print_array(s, "Output array")
-
-
-  -- Destroy plan
-  format.println("Calling destroy_plan...\n")
-  fft1d.destroy_plan(p)
-end
-
-
-
-__demand(__inline)
-task test1d_distrib()
-  var n = fft1d.get_num_nodes()
-  format.println("Num nodes in distrib is {}...", n)
-  var r = region(ispace(int1d, 3*n), complex64)
-  var r_part = partition(equal, r, ispace(int1d, n))
-  var s = region(ispace(int1d, 3*n), complex64)
-  var s_part = partition(equal, s, ispace(int1d, n))
-  for x in r do
-    r[x].real = 4
-    r[x].imag = 4
-  end
-  fill(s, 0)
-  print_array(r, "Input array for distrib")
-  var p = region(ispace(int1d, n), fft1d.plan)
-  var p_part = partition(equal, p, ispace(int1d, n))
-  -- Important: this overwrites r and s!
-  fft1d.make_plan_distrib(r, r_part, s, s_part, p, p_part)
-  __demand(__index_launch)
-  for i in r_part.colors do
-    fft1d.execute_plan_task(r_part[i], s_part[i], p)
-  end
-  print_array(s, "Output array for distrib")
-  fft1d.destroy_plan_distrib(p, p_part)
-end
-
-task main()
- test1d()
-end
-
-
-task main()
- test1d()
- test1d_distrib()
-end
-
-
-regentlib.start(main, cmapper.register_mappers)
+return fft
