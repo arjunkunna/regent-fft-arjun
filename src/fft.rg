@@ -42,7 +42,7 @@ function fft.generate_fft_interface(itype, dtype)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  assert(dtype == complex64, "currently only complex64 is supported")
+  --assert(dtype == complex64, "currently only complex64 is supported")
   assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftDoubleComplex), "Structure used in transform has to match complex64 size")
   assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex),"Structure used in transform has to match complex64 size")
 
@@ -92,7 +92,7 @@ function fft.generate_fft_interface(itype, dtype)
         end
       end
 
-      regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
+      --regentlib.assert(offsets[0].offset == terralib.sizeof(complex64), "stride does not match expected value")
       destroy_accessor(accessor)
       return base_pointer
     end
@@ -191,11 +191,6 @@ function fft.generate_fft_interface(itype, dtype)
 
   local plan_dft = fftw_c["fftw_plan_dft_" .. dim .. "d"]
 
-
-
-
-
-
   ----MAKE PLAN FUNCTIONS----
   
   --task: Make plan in GPU version. Stores plan in cufft_p
@@ -212,7 +207,7 @@ function fft.generate_fft_interface(itype, dtype)
       var p = iface.get_plan(plan, true)
 
       --Verify we are in GPU mode by checking TOC_PROC
-      -Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
+      --Takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
       var proc = get_executing_processor(__runtime())
       format.println("Make_Plan_GPU: TOC PROC IS {}",c.TOC_PROC)
       format.println("Make_Plan_GPU: Processor kind is {}", c.legion_processor_kind(proc))
@@ -252,7 +247,7 @@ function fft.generate_fft_interface(itype, dtype)
   
   --Takes input, output, and plan regions and makes plan using cufft/FFTW functions
    __demand(__inline)
-  task iface.make_plan(input : region(ispace(itype), dtype),output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan))
+  task iface.make_plan(input : region(ispace(itype), dtype),output : region(ispace(itype), dtype), plan : region(ispace(int1d), iface.plan), float : bool)
   where reads writes(input, output, plan) do
     format.println("In iface.make_plan...")
 
@@ -276,14 +271,39 @@ function fft.generate_fft_interface(itype, dtype)
     --local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
 
     --Get pointers to input and output regions
-    var input_base = get_base(c.legion_rect_1d_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
-    var output_base = get_base(c.legion_rect_1d_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
+    var input_base = get_base(rect_t(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
+    var output_base = get_base(rect_t(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
 
     --Call fftw_c.fftw_plan_dft_1d
     -- fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags)
     --n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     format.println("Storing fftw_plan in p.p...")
-    p.p = fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+    --p.p = fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+    
+    var lo = input.ispace.bounds.lo:to_point()
+    var hi = input.ispace.bounds.hi:to_point()
+
+    if dim == 1 then
+      var n : int[dim]
+      ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+      format.println("n[0] is {}, dim is {}", n[0], dim)
+      p.p = plan_dft([data.range(dim):map(function(i) return rexpr hi.x[i] - lo.x[i] + 1 end end)], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
+    end
+
+    if dim == 2 then
+      var n : int[dim]
+      ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+      format.println("n[0] is {}, n[1] is {}, dim is {}", n[0], n[1], dim)
+      p.p = fftw_c.fftw_plan_dft_2d(n[0],n[1], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+    end
+
+    if dim == 3 then
+      var n : int[dim]
+      ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+      format.println("n[0] is {}, n[1] is {}, n[2] is {}, dim is {}", n[0], n[1], n[2], dim)
+      p.p = fftw_c.fftw_plan_dft_3d(n[0],n[1],n[2], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+    end
+
     p.address_space = address_space
 
     --If GPUs, call make_plan_GPU
@@ -364,7 +384,18 @@ function fft.generate_fft_interface(itype, dtype)
     if c.legion_processor_kind(proc) == c.TOC_PROC then
       c.printf("execute plan via cuFFT\n")
       --cufftResult cufftExecZ2Z(cufftHandle plan, cufftDoubleComplex *idata, cufftDoubleComplex *odata, int direction)
-      var ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
+
+      var ok = 0
+
+      --format.println("size of dtype is {}", terralib.sizeof(output[0]))
+
+
+      --if terralib.sizeof(dtype) == terralib.sizeof(cufft_c.cufftDoubleComplex) then
+      ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
+      --else
+      --  c.printf("float version of cufftExec being called\n")
+      --  ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+      --end
 
       --Check return values of Exec
       if ok == cufft_c.CUFFT_INVALID_VALUE then
