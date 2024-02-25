@@ -34,6 +34,19 @@ where reads (input) do
   format.println("]\n")
 end
 
+
+
+__demand(__inline, __leaf)
+task print_array_real(input : region(ispace(int1d), double), arrayName: rawstring)
+where reads (input) do
+  format.println("\n{} = [", arrayName)
+  for x in input do
+    var currInt = input[x]
+    format.println("{}, ", currInt)
+  end
+  format.println("]\n")
+end
+
 task print_array_2d(input : region(ispace(int2d), complex64), arrayName: rawstring)
 where reads (input) do
   format.println("\n{} = [", arrayName)
@@ -59,13 +72,52 @@ end
 
 
 --function fft.generate_fft_interface(itype, dtype): itype = int1d, dtype = complex64, dim = itype.dim =1 
-local fft1d = fft.generate_fft_interface(int1d, complex64)
-local fft2d = fft.generate_fft_interface(int2d, complex64)
-local fft3d = fft.generate_fft_interface(int3d, complex64)
+local fft1d = fft.generate_fft_interface(int1d, complex64, complex64)
+local fft2d = fft.generate_fft_interface(int2d, complex64, complex64)
+local fft3d = fft.generate_fft_interface(int3d, complex64, complex64)
 
-local fft1d_float = fft.generate_fft_interface(int1d, complex32)
-local fft2d_float = fft.generate_fft_interface(int2d, complex32)
-local fft3d_float = fft.generate_fft_interface(int3d, complex32)
+local fft1d_float = fft.generate_fft_interface(int1d, complex32, complex32)
+local fft2d_float = fft.generate_fft_interface(int2d, complex32, complex32)
+local fft3d_float = fft.generate_fft_interface(int3d, complex32, complex32)
+
+local fft1d_real = fft.generate_fft_interface(int1d, double, complex64)
+
+--demand(__inline)
+task test1d_real()
+  format.println("Running test1d real...")
+  format.println("Creating input and output arrays...")
+  
+  -- Initialize input and output arrays
+  var r = region(ispace(int1d, 3), double)
+  var s = region(ispace(int1d, 3), complex64)
+  
+  fill(r, 3)
+
+  -- Initialize output array
+  fill(s, 0)
+  print_array_real(r, "Input array")
+
+  -- Initial plan region
+  var p = region(ispace(int1d, 1), fft1d_real.plan)
+  format.println("Calling make_plan...")
+  fft1d_real.make_plan(r, s, p)
+
+  -- Execute plan
+  format.println("Calling execute_plan...\n")
+  fft1d_real.execute_plan_task(r, s, p)
+
+  -- Print Output
+  print_array(s, "Output array")
+
+
+  -- Destroy plan
+  format.println("Calling destroy_plan...\n")
+  fft1d_real.destroy_plan(p)
+end
+
+
+
+
 
 --demand(__inline)
 task test1d_float()
@@ -211,7 +263,8 @@ end
 
 -- Main function
 task main()
- test1d_float()
+  test1d_real()
+ --test1d_float()
  --test1d()
  --test1d_distrib()
  --test2d()
