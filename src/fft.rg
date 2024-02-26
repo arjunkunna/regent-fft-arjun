@@ -58,17 +58,18 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
   -- Create fspaces depending on whether GPUs are used or not
   local iface_plan
-
+ 
   if default_foreign then 
     fspace iface_plan {
       p : fftw_c.fftw_plan,
+      float_p : fftw_c.fftwf_plan,
       cufft_p : cufft_c.cufftHandle,
       address_space : c.legion_address_space_t,
     }
-
   else
     fspace iface_plan {
       p : fftw_c.fftw_plan,
+      float_p : fftw_c.fftwf_plan,
       address_space : c.legion_address_space_t,
     }
   end
@@ -159,10 +160,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   end
 
 
-
-
-
-
   --Task to return pointer to plan. Takes plan region and returns pointer to plan
    __demand(__inline)
   task iface.get_plan(plan : region(ispace(int1d), iface.plan), check : bool) : &iface.plan
@@ -200,6 +197,8 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   end
 
   local plan_dft = fftw_c["fftw_plan_dft_" .. dim .. "d"]
+
+
 
   ----MAKE PLAN FUNCTIONS----
   
@@ -242,8 +241,10 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         var ok = 0
 
         if real_flag then
+          format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
           ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
         else
+          format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
           ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
         end
 
@@ -284,16 +285,13 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     -- https://legion.stanford.edu/doxygen/class_legion_1_1_physical_region.html
     --__physical(r.{f, g, ...}) returns an array of physical regions (legion_physical_region_t) for r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
     --__fields(r.{f, g, ...}) returns an array of the field IDs (legion_field_id_t) of r, one per field, for fields f, g, etc. in the order that the fields are listed in the call.
-    --local rect_t, get_base = make_get_base(dim, dtype) --get_base returns a base pointer to a region with fspace dtype. dim =1 , dtype = complex64
-    --local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
+    --local rect_t, get_base = make_get_base(dim, dtype) --get_base returns a base pointer to a region with fspace dtype. dim =1 , dtype = complex64 --local terra get_base(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
 
     --Get pointers to input and output regions
     var input_base = get_base_in(rect_t_in(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
     var output_base = get_base_out(rect_t_out(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
 
-    --Call fftw_c.fftw_plan_dft_1d
-    -- fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags)
-    --n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
+    --Call fftw_c.fftw_plan_dft_1d: fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags). n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     format.println("Storing fftw_plan in p.p...")
     --p.p = fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
     
@@ -303,25 +301,22 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     --dtype size is 8 for complex32 and 16 for complex64
     format.println("size of dtype is {}", dtype_size)
 
-
-    --if float_input then
+    --if dtype_size == 8 then
+    --  format.println("p.floatp being saved")
     --  p.float_p = fftw_c.fftwf_plan_dft_1d(3, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
-    --end
-
+    
+    --else 
     if real_flag then
       format.println("input is real")
       p.p = fftw_c.fftw_plan_dft_r2c_1d(3, [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
-
     else
-       if dim == 1 then
+      if dim == 1 then
         var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
         format.println("n[0] is {}, dim is {}", n[0], dim)
         p.p = plan_dft([data.range(dim):map(function(i) return rexpr hi.x[i] - lo.x[i] + 1 end end)], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
+      end
     end
-
-    end
-
 
     if dim == 2 then
       var n : int[dim]
@@ -390,9 +385,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   end
 
 
-
-
-
   ----EXECUTE PLAN FUNCTIONS----
 
   --Task to execute plan. Calls cufftExecZ2Z if in GPU mode and fftw_execute_dft if in CPU mode
@@ -420,11 +412,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       c.printf("execute plan via cuFFT\n")
 
       var ok = 0
-
       format.println("size of dtype is {}", dtype_size)
-
-      
-      --if terralib.sizeof(dtype) == terralib.sizeof(cufft_c.cufftDoubleComplex) then
 
       if real_flag then
         ok = cufft_c.cufftExecD2Z(p.cufft_p, [&cufft_c.cufftDoubleReal](input_base), [&cufft_c.cufftDoubleComplex](output_base))
@@ -432,7 +420,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
       end
 
-
+      -- TODO: Float verion
       --else
       --  c.printf("float version of cufftExec being called\n")
       --  ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
@@ -455,12 +443,19 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     else
       c.printf("execute plan via FFTW\n")
 
+      -- TODO: Float verion
+      --if dtype_size == 8 then
+      --  format.println("executing float fftw")
+      --  fftw_c.fftwf_execute_dft(p.float_p, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+      --else 
+      
       if real_flag then
         format.println("executing r2c")
         fftw_c.fftw_execute_dft_r2c(p.p, [&double](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
       else
         fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
       end
+      --end
     end
   end
 
@@ -469,7 +464,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   where reads(input, plan), reads writes(output) do
     iface.execute_plan(input, output, plan)
   end
-
 
 
   ----DESTROY PLAN FUNCTIONS----

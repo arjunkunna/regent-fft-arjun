@@ -10,6 +10,8 @@ local cufft_c = terralib.includec("cufftXt.h")
 terralib.linklibrary("libcufft.so")
 
 
+----PRINT FUNCTIONS-----
+
 -- Task to print out input or output array with fieldspace complex64. Takes a region and a string representing the name of the array
 __demand(__inline, __leaf)
 task print_array(input : region(ispace(int1d), complex64), arrayName: rawstring)
@@ -33,8 +35,6 @@ where reads (input) do
   end
   format.println("]\n")
 end
-
-
 
 __demand(__inline, __leaf)
 task print_array_real(input : region(ispace(int1d), double), arrayName: rawstring)
@@ -116,9 +116,6 @@ task test1d_real()
 end
 
 
-
-
-
 --demand(__inline)
 task test1d_float()
   format.println("Running test1d...")
@@ -161,11 +158,9 @@ task test1d()
   format.println("Running test1d...")
   format.println("Creating input and output arrays...")
 
-  
   -- Initialize input and output arrays
   var r = region(ispace(int1d, 3), complex64)
   var s = region(ispace(int1d, 3), complex64)
-  
 
   for x in r do
     r[x].real = 4
@@ -263,9 +258,9 @@ end
 
 -- Main function
 task main()
-  test1d_real()
+ --test1d_real()
  --test1d_float()
- --test1d()
+ test1d()
  --test1d_distrib()
  --test2d()
  --test3d()
