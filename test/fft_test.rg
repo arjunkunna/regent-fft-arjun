@@ -118,7 +118,7 @@ end
 
 --demand(__inline)
 task test1d_float()
-  format.println("Running test1d...")
+  format.println("Running test1d float...")
   format.println("Creating input and output arrays...")
   
   -- Initialize input and output arrays
@@ -259,8 +259,8 @@ end
 -- Main function
 task main()
  --test1d_real()
- --test1d_float()
- test1d()
+ test1d_float()
+ --test1d()
  --test1d_distrib()
  --test2d()
  --test3d()

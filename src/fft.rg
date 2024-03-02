@@ -53,6 +53,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   --assert(dtype == complex64, "currently only complex64 is supported")
   assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftDoubleComplex), "Structure used in transform has to match complex64 size")
   assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex),"Structure used in transform has to match complex64 size")
+  assert(terralib.sizeof(complex32) == terralib.sizeof(fftw_c.fftwf_complex),"Structure used in transform has to match complex64 size")
 
   local iface = {}
 
@@ -240,13 +241,15 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
         var ok = 0
 
-        if real_flag then
-          format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
-        else
-          format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
-        end
+        ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+
+        --if real_flag then
+        --  format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
+        -- ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
+        --else
+        --  format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
+        -- ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
+        --end
 
         --Check return value of cufftPlanMany
         if ok == cufft_c.CUFFT_INVALID_VALUE then
@@ -301,35 +304,37 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     --dtype size is 8 for complex32 and 16 for complex64
     format.println("size of dtype is {}", dtype_size)
 
-    --if dtype_size == 8 then
-    --  format.println("p.floatp being saved")
-    --  p.float_p = fftw_c.fftwf_plan_dft_1d(3, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
-    
-    --else 
-    if real_flag then
-      format.println("input is real")
-      p.p = fftw_c.fftw_plan_dft_r2c_1d(3, [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
-    else
-      if dim == 1 then
+    if dtype_size == 8 then
+      format.println("p.floatp being saved")
+      --p.float_p = fftw_c.fftwf_plan_dft_1d(3, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+
+
+    else 
+      if real_flag then
+        format.println("input is real")
+        p.p = fftw_c.fftw_plan_dft_r2c_1d(3, [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
+      else
+        if dim == 1 then
+          var n : int[dim]
+          ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+          format.println("n[0] is {}, dim is {}", n[0], dim)
+          p.p = plan_dft([data.range(dim):map(function(i) return rexpr hi.x[i] - lo.x[i] + 1 end end)], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
+        end
+      end
+
+      if dim == 2 then
         var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-        format.println("n[0] is {}, dim is {}", n[0], dim)
-        p.p = plan_dft([data.range(dim):map(function(i) return rexpr hi.x[i] - lo.x[i] + 1 end end)], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
+        format.println("n[0] is {}, n[1] is {}, dim is {}", n[0], n[1], dim)
+        p.p = fftw_c.fftw_plan_dft_2d(n[0],n[1], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
       end
-    end
 
-    if dim == 2 then
-      var n : int[dim]
-      ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-      format.println("n[0] is {}, n[1] is {}, dim is {}", n[0], n[1], dim)
-      p.p = fftw_c.fftw_plan_dft_2d(n[0],n[1], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-    end
-
-    if dim == 3 then
-      var n : int[dim]
-      ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-      format.println("n[0] is {}, n[1] is {}, n[2] is {}, dim is {}", n[0], n[1], n[2], dim)
-      p.p = fftw_c.fftw_plan_dft_3d(n[0],n[1],n[2], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+      if dim == 3 then
+       var n : int[dim]
+        ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+        format.println("n[0] is {}, n[1] is {}, n[2] is {}, dim is {}", n[0], n[1], n[2], dim)
+        p.p = fftw_c.fftw_plan_dft_3d(n[0],n[1],n[2], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+     end
     end
 
     p.address_space = address_space
@@ -414,11 +419,17 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       var ok = 0
       format.println("size of dtype is {}", dtype_size)
 
-      if real_flag then
-        ok = cufft_c.cufftExecD2Z(p.cufft_p, [&cufft_c.cufftDoubleReal](input_base), [&cufft_c.cufftDoubleComplex](output_base))
-      else
-        ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
+      if dtype_size == 8 then
+        format.println("cufftExecC2C being called")
+        ok = cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
       end
+
+
+      --if real_flag then
+      --  ok = cufft_c.cufftExecD2Z(p.cufft_p, [&cufft_c.cufftDoubleReal](input_base), [&cufft_c.cufftDoubleComplex](output_base))
+      --else
+      --  ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
+      --end
 
       -- TODO: Float verion
       --else
@@ -446,15 +457,16 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       -- TODO: Float verion
       --if dtype_size == 8 then
       --  format.println("executing float fftw")
-      --  fftw_c.fftwf_execute_dft(p.float_p, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+        --fftw_c.fftwf_execute_dft(p.float_p, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+      --end
       --else 
+      --  if real_flag then
+      --    format.println("executing r2c")
+      --    fftw_c.fftw_execute_dft_r2c(p.p, [&double](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+      --  else
+      --    fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+      --  end
       
-      if real_flag then
-        format.println("executing r2c")
-        fftw_c.fftw_execute_dft_r2c(p.p, [&double](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
-      else
-        fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
-      end
       --end
     end
   end
