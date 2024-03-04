@@ -47,6 +47,9 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   if dtype_in == double then
     real_flag = true
   end
+  if dtype_in == float then
+    real_flag = true
+  end
 
 
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
@@ -241,15 +244,25 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
         var ok = 0
 
-        ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
 
-        --if real_flag then
-        --  format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
-        -- ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
-        --else
-        --  format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
-        -- ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
-        --end
+        if dtype_size == 8 then
+          if real_flag then
+            format.println("Calling cufftPlanMany with CUFFT_R2C ...")
+            ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_R2C, 1)
+          else
+            format.println("Calling cufftPlanMany with CUFFT_C2C ...")
+            ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+          end
+        else
+
+          if real_flag then
+            format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
+            ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
+          else
+            format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
+            ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_Z2Z, 1)
+          end
+        end
 
         --Check return value of cufftPlanMany
         if ok == cufft_c.CUFFT_INVALID_VALUE then
@@ -296,8 +309,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
     --Call fftw_c.fftw_plan_dft_1d: fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags). n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     format.println("Storing fftw_plan in p.p...")
-    --p.p = fftw_c.fftw_plan_dft_1d(input.ispace.volume, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-    
+
     var lo = input.ispace.bounds.lo:to_point()
     var hi = input.ispace.bounds.hi:to_point()
 
@@ -305,36 +317,30 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     format.println("size of dtype is {}", dtype_size)
 
     if dtype_size == 8 then
-      format.println("p.floatp being saved")
-      --p.float_p = fftw_c.fftwf_plan_dft_1d(3, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-
-
-    else 
+      format.println("data type is float")
       if real_flag then
-        format.println("input is real")
-        p.p = fftw_c.fftw_plan_dft_r2c_1d(3, [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
-      else
-        if dim == 1 then
-          var n : int[dim]
-          ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-          format.println("n[0] is {}, dim is {}", n[0], dim)
-          p.p = plan_dft([data.range(dim):map(function(i) return rexpr hi.x[i] - lo.x[i] + 1 end end)], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_MEASURE)
-        end
-      end
-
-      if dim == 2 then
         var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-        format.println("n[0] is {}, n[1] is {}, dim is {}", n[0], n[1], dim)
-        p.p = fftw_c.fftw_plan_dft_2d(n[0],n[1], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-      end
-
-      if dim == 3 then
-       var n : int[dim]
+        format.println("calling fftwf_plan_dft_r2c")
+        --p.float_p = fftw_c.fftwf_plan_dft_r2c(dim, &n[0], [&float](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_ESTIMATE)
+      else
+        var n : int[dim]
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-        format.println("n[0] is {}, n[1] is {}, n[2] is {}, dim is {}", n[0], n[1], n[2], dim)
-        p.p = fftw_c.fftw_plan_dft_3d(n[0],n[1],n[2], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-     end
+        format.println("calling fftwf_plan_dft")
+        --p.float_p = fftw_c.fftwf_plan_dft(dim, &n[0], [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+      end
+    else
+      if real_flag then
+        format.println("input is real")
+        var n : int[dim]
+        ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+        p.p = fftw_c.fftw_plan_dft_r2c(dim, &n[0], [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
+      else
+        var n : int[dim]
+        ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+        format.println("n[0] is {}, dim is {}", n[0], dim)
+        p.p = fftw_c.fftw_plan_dft(dim, &n[0], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
+      end
     end
 
     p.address_space = address_space
@@ -420,22 +426,22 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       format.println("size of dtype is {}", dtype_size)
 
       if dtype_size == 8 then
-        format.println("cufftExecC2C being called")
-        ok = cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+        if real_flag then
+          format.println("Calling cufftExecR2C ...")
+          --ok = cufft_c.cufftExecR2C(p.cufft_p, [&cufft_c.cufftReal](input_base), [&cufft_c.cufftComplex](output_base))
+        else
+          format.println("Calling cufftExecC2C ...")
+          ok = cufft_c.cufftExecC2C(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
+        end
+      else
+        if real_flag then
+          format.println("Calling cufftExecD2Z ...")
+          ok = cufft_c.cufftExecD2Z(p.cufft_p, [&cufft_c.cufftDoubleReal](input_base), [&cufft_c.cufftDoubleComplex](output_base))
+        else
+          format.println("Calling cufftExecZ2Z ...")
+          ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
+        end
       end
-
-
-      --if real_flag then
-      --  ok = cufft_c.cufftExecD2Z(p.cufft_p, [&cufft_c.cufftDoubleReal](input_base), [&cufft_c.cufftDoubleComplex](output_base))
-      --else
-      --  ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftDoubleComplex](input_base), [&cufft_c.cufftDoubleComplex](output_base), cufft_c.CUFFT_FORWARD)
-      --end
-
-      -- TODO: Float verion
-      --else
-      --  c.printf("float version of cufftExec being called\n")
-      --  ok = cufft_c.cufftExecZ2Z(p.cufft_p, [&cufft_c.cufftComplex](input_base), [&cufft_c.cufftComplex](output_base), cufft_c.CUFFT_FORWARD)
-      --end
 
       --Check return values of Exec
       if ok == cufft_c.CUFFT_INVALID_VALUE then
@@ -455,19 +461,23 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       c.printf("execute plan via FFTW\n")
 
       -- TODO: Float verion
-      --if dtype_size == 8 then
-      --  format.println("executing float fftw")
-        --fftw_c.fftwf_execute_dft(p.float_p, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
-      --end
-      --else 
-      --  if real_flag then
-      --    format.println("executing r2c")
-      --    fftw_c.fftw_execute_dft_r2c(p.p, [&double](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
-      --  else
-      --    fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
-      --  end
-      
-      --end
+      if dtype_size == 8 then
+        if real_flag then
+          format.println("executing r2c")
+          --fftw_c.fftwf_execute_dft_r2c(p.float_p, [&float](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+        else
+          format.println("executing float fftw")
+          --fftw_c.fftwf_execute_dft(p.float_p, [&fftw_c.fftwf_complex](input_base), [&fftw_c.fftwf_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+        end
+      else 
+        if real_flag then
+          format.println("executing fftw_dft_r2c")
+          fftw_c.fftw_execute_dft_r2c(p.p, [&double](input_base), [&fftw_c.fftw_complex](output_base))     --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+        else
+          format.println("executing fftw dft")
+          fftw_c.fftw_execute_dft(p.p, [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base))   --void fftw_execute_dft(const fftw_plan p, fftw_complex *in, fftw_complex *out))
+        end 
+      end
     end
   end
 
@@ -501,6 +511,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     -- Else, cal fftw_destroy
     c.printf("Destroy plan via FFTW\n")
     fftw_c.fftw_destroy_plan(p.p)
+    --fftw_c.fftwf_destroy_plan(p.float_p)
   end
 
 
@@ -522,5 +533,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
   return iface
 end
+
 
 return fft
