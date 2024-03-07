@@ -2,16 +2,21 @@
 
 This is a fast fourier transform library built in Regent.
 
+For information on Regent, please refer to https://regent-lang.org/
+For inforation on FFT, please refer to https://web.stanford.edu/class/cs168/l/l15.pdf or https://see.stanford.edu/Course/EE261
+
 ## Description
 
-An in-depth paragraph about your project and overview of use.
+
+The library currently supports transforms up to 3 dimensions, and can be configured to run on either a CPU or a GPU.
+
+The CPU mode is supported by FFTW, and the GPU mode by cuFFT
+
+Both Complex-to-Complex and Real-To-Complex transformations are supported.
+
+Both complex64 and complex32 types are supported in GPU mode, but only complex64 in CPU mode. It is possible to use complex32 in CPU mode but it requires some additional setup - please contact me if that is of interest.
 
 ## Getting Started
-
-### Dependencies
-
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
 
 ### Installing
 
@@ -27,14 +32,18 @@ Run the install script:
 
 If operating in sapling, these are the instructions:
 
-1. SSH into sapling: ssh <username>@sapling.stanford.edu
-2. module load slurm mpi cmake cuda llvm
-3. srun -n 1 -N 1 -c 40 -p gpu --exclusive --pty bash --login
-4. <navigate to your .rg file>
-5. source env.sh
-6. ../legion/language/regent.py test/fft_test.rg 
-``
+1. SSH into sapling
+```
+ssh <username>@sapling.stanford.edu
+```
+module load slurm mpi cmake cuda llvm
+srun -n 1 -N 1 -c 40 -p gpu --exclusive --pty bash --login
+<navigate to your .rg file>
+source env.sh
+../legion/language/regent.py test/fft_test.rg 
+```
 
+## Usage
 
 ### Executing program
 
