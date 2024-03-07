@@ -25,17 +25,20 @@ First, clone the repo:
 git clone https://github.com/arjunkunna/regent-fft-arjun.git
 ```
 
-Run the install script:
+Run the install script and add environment variables
 ```
 ./install.py
+source env.sh
 ```
 
-If operating in sapling, these are the instructions:
+Then, run your .rg script:
+```
+../legion/language/regent.py test/fft_test.rg 
+```
 
-1. SSH into sapling
+If operating in sapling, here are some startup instructions:
 ```
 ssh <username>@sapling.stanford.edu
-```
 module load slurm mpi cmake cuda llvm
 srun -n 1 -N 1 -c 40 -p gpu --exclusive --pty bash --login
 <navigate to your .rg file>
@@ -47,45 +50,76 @@ source env.sh
 
 ### Executing program
 
-* How to run the program
-* Step-by-step bullets\
-
-
 There are 4 possible modes:
 1. GPU vs. CPU
-1. Complex-to-Complex vs. Real-to-Complex
-2. Float vs. Double (Only supported in GPU mode)
+2. Complex-to-Complex vs. Real-to-Complex
+3. Float vs. Double (Only supported in GPU mode)
 
+API usage generally follows the following steps. First, an FFT interface has to be generated depending on the type of transform you hope to do. Then, we create a plan, execute said plan, and then destroy the plan once we are done. 
+There are several sample code snippets in the fft_test.rg file for reference as well. 
 
-1. Generate an interface. The first argument is the dimension - int1d, int2d, or int3d
-2. The second argument is the data type of the input - complex64, complex32, real, or double
-3. The third argument is the data type of the input - complex64 or complex32
-
+1. Link the fft.rg file and generate an interface.
+   *The first argument is the dimension - int1d, int2d, or int3d
+   *The second argument is the data type of the input - complex64, complex32, real, or double
+   *The third argument is the data type of the input - complex64 or complex32
 ```
+local fft = require("fft")
 local fft1d = fft.generate_fft_interface(int1d, complex64, complex64)
 ```
 
-## Help
+2. Make a plan
 
-Any advise for common problems or issues.
+Make_plan takes three arguments: 1. Our input region, r 2. Our output region, s 3. Our plan region, p
+
 ```
-command to run if program contains helper info
+  fft1d.make_plan(r, s, p)
 ```
+
+The input region should be initialized with index space of form ispace(<type>, N), where N is the size of the array, and <type> is either int1d/int2d/int3d depending on the dimension of the transform.
+The fieldspace of the region is the type supported by the transform - e.g, in a real-to-complex transform with doubles, the input array will have fieldspace double and output array will have fieldspace complex64
+
+```
+var r = region(ispace(int1d, 3), double)
+var s = region(ispace(int1d, 3), complex64)
+```
+
+The plan region always takes the following form, with fieldspace fft.plan
+
+```
+ var p = region(ispace(int1d, 1), fft1d.plan)
+```
+make_plan is a __demand(__inline) task. This means that if the user wants it to execute it in a separate task, they must wrap the task themselves
+
+3. Execute the plan
+Next, we execute the plan. This takes the same 3 regions as mentioned above. 
+
+```
+   fft1d.execute_plan_task(r, s, p)
+```
+
+Note that execute_plan is a __demand(__inline) task (similar to make_plan above). The task execute_plan_task is simply a wrapper around execute_plan for convenience, to avoid needing to define this explicitly.
+Important: because execute_plan is a __demand(__inline) task, it will never execute on the GPU (unless the parent task is running on the GPU). Therefore, in most cases it is necessary to use execute_plan_task if one wants to use the GPU.
+
+4 Destroy the plan
+
+When a plan is no longer needed it can be destroyed.
+```  
+  fft1d.destroy_plan(p)
+```
+
+
 
 ## Authors
 
 Contributors names and contact info
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+ex. Elliott Slaughter (slaughter@cs.stanford.edu)
+ex. Arjun Kunna (arjunkunna@gmail.com)
 
 ## Version History
 
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
 * 0.1
-    * Initial Release
+    * Initial Release - Supports single-GPU transforms for 1, 2, and 3d. Real-to-complex and Complex-to-Complex. 
 
 ## License
 
@@ -93,9 +127,7 @@ This project is licensed under the [NAME HERE] License - see the LICENSE.md file
 
 ## Acknowledgments
 
-Inspiration, code snippets, etc.
-* [awesome-readme](https://github.com/matiassingers/awesome-readme)
-* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
-* [dbader](https://github.com/dbader/readme-template)
-* [zenorocha](https://gist.github.com/zenorocha/4526327)
-* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)
+* [FFTW](https://www.fftw.org/)
+* [cuFFT](https://developer.nvidia.com/cufft)
+* [Regent](https://regent-lang.org/)
+
