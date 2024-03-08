@@ -11,7 +11,6 @@ local default_foreign = gpuhelper.check_gpu_available()
 --Import C and FFTW APIs
 local c = regentlib.c
 local fftw_c = terralib.includec("fftw3.h")
-local fftwf_c = 
 terralib.linklibrary("libfftw3.so")
 
 --Import cuFFT API
@@ -21,19 +20,12 @@ if default_foreign then
   terralib.linklibrary("libcufft.so")
 end
 
-
 --Hack: get defines from fftw3.h
 fftw_c.FFTW_FORWARD = -1
 fftw_c.FFTW_BACKWARD = 1
 fftw_c.FFTW_MEASURE = 0
-fftw_c.FFTW_DESTROY_INPUT = (2 ^ 0)
-fftw_c.FFTW_UNALIGNED = (2 ^ 1)
-fftw_c.FFTW_CONSERVE_MEMORY = (2 ^ 2)
-fftw_c.FFTW_EXHAUSTIVE = (2 ^ 3) -- NO_EXHAUSTIVE is default
-fftw_c.FFTW_PRESERVE_INPUT = (2 ^ 4) -- cancels FFTW_DESTROY_INPUT
-fftw_c.FFTW_PATIENT = (2 ^ 5) -- IMPATIENT is default
 fftw_c.FFTW_ESTIMATE = (2 ^ 6)
-fftw_c.FFTW_WISDOM_ONLY = (2 ^ 21)
+
 
 
 local fft = {}
@@ -43,6 +35,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
   local dim = itype.dim
   local dtype_size = terralib.sizeof(dtype_out)
+  
   local real_flag = false
   if dtype_in == double then
     real_flag = true
@@ -51,12 +44,8 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     real_flag = true
   end
 
-
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
-  --assert(dtype == complex64, "currently only complex64 is supported")
-  assert(terralib.sizeof(complex64) == terralib.sizeof(cufft_c.cufftDoubleComplex), "Structure used in transform has to match complex64 size")
-  assert(terralib.sizeof(complex64) == terralib.sizeof(fftw_c.fftw_complex),"Structure used in transform has to match complex64 size")
-  assert(terralib.sizeof(complex32) == terralib.sizeof(fftw_c.fftwf_complex),"Structure used in transform has to match complex64 size")
+  
 
   local iface = {}
 
@@ -200,13 +189,10 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     return p
   end
 
-  local plan_dft = fftw_c["fftw_plan_dft_" .. dim .. "d"]
-
-
 
   ----MAKE PLAN FUNCTIONS----
   
-  --task: Make plan in GPU version. Stores plan in cufft_p
+  --Task: Make plan in GPU version. Calls cufftPlanMany and stores plan in cufft_p
   local make_plan_gpu
   if default_foreign then
     __demand(__cuda, __leaf)
@@ -226,6 +212,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       format.println("Make_Plan_GPU: Processor kind is {}", c.legion_processor_kind(proc))
 
       if c.legion_processor_kind(proc) == c.TOC_PROC then
+        format.println("Processor is TOC, so running GPU functions")
         var i = c.legion_processor_address_space(proc)
         regentlib.assert(address_space == i, "make_plan_gpu must be executed on a processor in the same address space")
 
@@ -234,7 +221,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         var output_base = get_base_out(rect_t_out(output.ispace.bounds), __physical(output)[0], __fields(output)[0])
         var lo = input.ispace.bounds.lo:to_point()
         var hi = input.ispace.bounds.hi:to_point()
-        var n : int[dim]
+        var n : int[dim] --n is an array of size dim with the size of each dimension in the entries
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
       
 
@@ -243,7 +230,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         format.println("Calling cufftPlanMany...")
 
         var ok = 0
-
 
         if dtype_size == 8 then
           if real_flag then
@@ -266,7 +252,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
         --Check return value of cufftPlanMany
         if ok == cufft_c.CUFFT_INVALID_VALUE then
-          format.println("Invalid value in cufftplanmany")
+          format.println("Invalid value in cufftPlanMany")
         end
 
         regentlib.assert(ok == cufft_c.CUFFT_SUCCESS, "cufftPlanMany failed")
@@ -314,7 +300,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     var hi = input.ispace.bounds.hi:to_point()
 
     --dtype size is 8 for complex32 and 16 for complex64
-    format.println("size of dtype is {}", dtype_size)
+    format.println("Size of dtype is {}", dtype_size)
 
     if dtype_size == 8 then
       format.println("data type is float")

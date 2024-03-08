@@ -1220,7 +1220,7 @@ configure:13663: $? = 0
 configure:13663: result: yes
 configure:13669: checking for _doprnt
 configure:13669: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c  >&5
-/usr/bin/ld: /tmp/cc48nZSt.o: in function `main':
+/usr/bin/ld: /tmp/ccEc7vDb.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `_doprnt'
 collect2: error: ld returned 1 exit status
 configure:13669: $? = 1
@@ -1323,7 +1323,7 @@ configure:13705: $? = 0
 configure:13714: result: yes
 configure:13819: checking for BSDgettimeofday
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/cc3qOx9S.o: in function `main':
+/usr/bin/ld: /tmp/ccnkjztE.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `BSDgettimeofday'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1422,7 +1422,7 @@ configure:13819: $? = 0
 configure:13819: result: yes
 configure:13819: checking for gethrtime
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccWxT0OI.o: in function `main':
+/usr/bin/ld: /tmp/ccW9HBit.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `gethrtime'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1518,7 +1518,7 @@ configure: failed program was:
 configure:13819: result: no
 configure:13819: checking for read_real_time
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccE75fm3.o: in function `main':
+/usr/bin/ld: /tmp/ccrgnj5O.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `read_real_time'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1614,7 +1614,7 @@ configure: failed program was:
 configure:13819: result: no
 configure:13819: checking for time_base_to_time
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccpJIvIo.o: in function `main':
+/usr/bin/ld: /tmp/cc5ZKiDa.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `time_base_to_time'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1745,7 +1745,7 @@ configure:13819: $? = 0
 configure:13819: result: yes
 configure:13819: checking for _mm_malloc
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccRn6a4E.o: in function `main':
+/usr/bin/ld: /tmp/ccyyLpgm.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `_mm_malloc'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1846,7 +1846,7 @@ configure: failed program was:
 configure:13819: result: no
 configure:13819: checking for _mm_free
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccRa3QmZ.o: in function `main':
+/usr/bin/ld: /tmp/cczYyZDK.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `_mm_free'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -1951,7 +1951,7 @@ configure:13819: $? = 0
 configure:13819: result: yes
 configure:13819: checking for mach_absolute_time
 configure:13819: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm  >&5
-/usr/bin/ld: /tmp/ccVykKRP.o: in function `main':
+/usr/bin/ld: /tmp/ccHYsBNx.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `mach_absolute_time'
 collect2: error: ld returned 1 exit status
 configure:13819: $? = 1
@@ -2336,7 +2336,7 @@ conftest.c: In function 'main':
 conftest.c:79:1: warning: implicit declaration of function '_rtc' [-Wimplicit-function-declaration]
    79 | _rtc()
       | ^~~~
-/usr/bin/ld: /tmp/ccIHlOLE.o: in function `main':
+/usr/bin/ld: /tmp/ccmhZYNp.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `_rtc'
 collect2: error: ld returned 1 exit status
 configure:13935: $? = 1
@@ -2518,7 +2518,7 @@ Using built-in specs.
 Target: x86_64-linux-gnu
 Thread model: posix
 gcc version 9.4.0 (Ubuntu 9.4.0-1ubuntu1~20.04.2) 
- /usr/lib/gcc/x86_64-linux-gnu/9/f951 conftest.f -ffixed-form -quiet -dumpbase conftest.f -mtune=generic -march=x86-64 -auxbase conftest -g -O2 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/9/finclude -fpre-include=/usr/include/finclude/math-vector-fortran.h -o /tmp/ccirnNCJ.s
+ /usr/lib/gcc/x86_64-linux-gnu/9/f951 conftest.f -ffixed-form -quiet -dumpbase conftest.f -mtune=generic -march=x86-64 -auxbase conftest -g -O2 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/9/finclude -fpre-include=/usr/include/finclude/math-vector-fortran.h -o /tmp/cc81qMmt.s
 GNU Fortran (Ubuntu 9.4.0-1ubuntu1~20.04.2) version 9.4.0 (x86_64-linux-gnu)
 	compiled by GNU C version 9.4.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
 
@@ -2527,11 +2527,11 @@ GNU Fortran2008 (Ubuntu 9.4.0-1ubuntu1~20.04.2) version 9.4.0 (x86_64-linux-gnu)
 	compiled by GNU C version 9.4.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
 
 GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
- as -v --64 -o /tmp/ccX9AG8H.o /tmp/ccirnNCJ.s
+ as -v --64 -o /tmp/ccI9YaSt.o /tmp/cc81qMmt.s
 GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34
 Reading specs from /usr/lib/gcc/x86_64-linux-gnu/9/libgfortran.spec
 rename spec lib to liborig
- /usr/lib/gcc/x86_64-linux-gnu/9/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper -plugin-opt=-fresolution=/tmp/ccmQwqOJ.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o conftest /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccX9AG8H.o -lgfortran -lm -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+ /usr/lib/gcc/x86_64-linux-gnu/9/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper -plugin-opt=-fresolution=/tmp/cc0bXmtt.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o conftest /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccI9YaSt.o -lgfortran -lm -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
 configure:17524: result: -v
 configure:17526: checking for Fortran 77 libraries of f77
 configure:17549: f77 -o conftest -g -O2 -v conftest.f -lm
@@ -2539,7 +2539,7 @@ Using built-in specs.
 Target: x86_64-linux-gnu
 Thread model: posix
 gcc version 9.4.0 (Ubuntu 9.4.0-1ubuntu1~20.04.2) 
- /usr/lib/gcc/x86_64-linux-gnu/9/f951 conftest.f -ffixed-form -quiet -dumpbase conftest.f -mtune=generic -march=x86-64 -auxbase conftest -g -O2 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/9/finclude -fpre-include=/usr/include/finclude/math-vector-fortran.h -o /tmp/ccB0NT8P.s
+ /usr/lib/gcc/x86_64-linux-gnu/9/f951 conftest.f -ffixed-form -quiet -dumpbase conftest.f -mtune=generic -march=x86-64 -auxbase conftest -g -O2 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/9/finclude -fpre-include=/usr/include/finclude/math-vector-fortran.h -o /tmp/cc3L9KKC.s
 GNU Fortran (Ubuntu 9.4.0-1ubuntu1~20.04.2) version 9.4.0 (x86_64-linux-gnu)
 	compiled by GNU C version 9.4.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
 
@@ -2548,11 +2548,11 @@ GNU Fortran2008 (Ubuntu 9.4.0-1ubuntu1~20.04.2) version 9.4.0 (x86_64-linux-gnu)
 	compiled by GNU C version 9.4.0, GMP version 6.2.0, MPFR version 4.0.2, MPC version 1.1.0, isl version isl-0.22.1-GMP
 
 GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
- as -v --64 -o /tmp/ccZMX8hS.o /tmp/ccB0NT8P.s
+ as -v --64 -o /tmp/ccitiG2B.o /tmp/cc3L9KKC.s
 GNU assembler version 2.34 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.34
 Reading specs from /usr/lib/gcc/x86_64-linux-gnu/9/libgfortran.spec
 rename spec lib to liborig
- /usr/lib/gcc/x86_64-linux-gnu/9/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper -plugin-opt=-fresolution=/tmp/ccPutoCQ.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o conftest /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccZMX8hS.o -lgfortran -lm -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
+ /usr/lib/gcc/x86_64-linux-gnu/9/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/9/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/9/lto-wrapper -plugin-opt=-fresolution=/tmp/cc5AL5uD.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o conftest /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. /tmp/ccitiG2B.o -lgfortran -lm -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/9/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu/crtn.o
 configure:17745: result:  -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. -lgfortran -lm -lquadmath
 configure:17761: checking for dummy main to link with Fortran 77 libraries
 configure:17795: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c -lm   -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. -lgfortran -lm -lquadmath >&5
@@ -2562,7 +2562,7 @@ configure:15076: checking for Fortran 77 name-mangling scheme
 configure:15089: f77 -c -g -O2 conftest.f >&5
 configure:15089: $? = 0
 configure:15130: gcc -o conftest -O3 -fomit-frame-pointer -mtune=native -malign-double -fstrict-aliasing -fno-schedule-insns   conftest.c cfortran_test.o -lm   -L/usr/lib/gcc/x86_64-linux-gnu/9 -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/9/../../.. -lgfortran -lm -lquadmath >&5
-/usr/bin/ld: /tmp/cci8kWpn.o: in function `main':
+/usr/bin/ld: /tmp/ccxGgSi6.o: in function `main':
 conftest.c:(.text.startup+0xb): undefined reference to `foobar'
 collect2: error: ld returned 1 exit status
 configure:15130: $? = 1

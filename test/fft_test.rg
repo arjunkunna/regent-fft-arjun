@@ -24,7 +24,7 @@ where reads (input) do
   format.println("]\n")
 end
 
--- Task to print out input or output array with fieldspace complex64. Takes a region and a string representing the name of the array
+-- Task to print out input or output array with fieldspace complex32. Takes a region and a string representing the name of the array
 __demand(__inline, __leaf)
 task print_array_float_complex(input : region(ispace(int1d), complex32), arrayName: rawstring)
 where reads (input) do
@@ -82,6 +82,7 @@ where reads (input) do
 end
 
 
+----SET UP INTERFACES----
 
 --function fft.generate_fft_interface(itype, dtype): itype = int1d, dtype = complex64, dim = itype.dim =1 
 local fft1d = fft.generate_fft_interface(int1d, complex64, complex64)
@@ -94,6 +95,10 @@ local fft3d_float = fft.generate_fft_interface(int3d, complex32, complex32)
 
 local fft1d_real = fft.generate_fft_interface(int1d, double, complex64)
 local fft1d_float_real = fft.generate_fft_interface(int1d, float, complex32)
+
+
+
+-----TEST TASKS-----
 
 --demand(__inline)
 task test1d_real()
@@ -279,16 +284,14 @@ task test2d()
   fft2d.destroy_plan(p)
 end
 
-
-
 __demand(__inline)
 task test3d()
   format.println("Running test3d...")
-  var r = region(ispace(int3d, { 2, 2, 2 }), complex64)
-  var s = region(ispace(int3d, { 2, 2, 2 }), complex64)
+  var r = region(ispace(int3d, { 3, 2, 2 }), complex64)
+  var s = region(ispace(int3d, { 3, 2, 2 }), complex64)
   for x in r do
-    r[x].real = 4
-    r[x].imag = 4
+    r[x].real = 3
+    r[x].imag = 3
   end
   fill(s, 0)
   print_array_3d_double_complex(r, "Input array")
@@ -307,13 +310,11 @@ task main()
  --test1d_real()
  --test1d_float()
  --test1d_float_real()
- test1d()
+ --test1d()
  --test1d_distrib()
  --test2d()
- --test3d()
+ test3d()
 end
 
 --Include mapper
 regentlib.start(main, cmapper.register_mappers)
---local target = os.getenv("OBJNAME")
---regentlib.saveobj(main, target, "executable", "object", cmapper.register_mappers)
