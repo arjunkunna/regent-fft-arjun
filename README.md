@@ -114,6 +114,11 @@ When a plan is no longer needed it can be destroyed.
   fft1d.destroy_plan(p)
 ```
 
+## Future Developments
+
+Next items in the pipeline include batch transforms, as well as distributed transforms across multiple nodes. Please let us know if there are specific features that may be helpful.
+
+
 ## Authors
 
 * Elliott Slaughter (slaughter@cs.stanford.edu)
