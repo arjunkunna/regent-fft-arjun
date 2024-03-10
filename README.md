@@ -122,7 +122,7 @@ When a plan is no longer needed it can be destroyed.
 ## Version History
 
 * 1.0
-    * Initial Release - Supports single-GPU transforms for 1, 2, and 3d. Real-to-complex and Complex-to-Complex. 
+    * Initial Release - Supports CPU and single-GPU transforms for 1D, 2D, and 3D. Supports Real-to-complex and Complex-to-Complex transforms for both CPU and GPU. Supports complex32 for GPU.
 
 ## Additional Resources
 * For information on Regent, please refer to [the Regent website](https://regent-lang.org/)
