@@ -27,7 +27,6 @@ fftw_c.FFTW_MEASURE = 0
 fftw_c.FFTW_ESTIMATE = (2 ^ 6)
 
 
-
 local fft = {}
 
 --itype should be the index type of the transform (int1d for 1d/int2d for 2d) and dtype = complex64
@@ -37,16 +36,12 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   local dtype_size = terralib.sizeof(dtype_out)
   
   local real_flag = false
-  if dtype_in == double then
-    real_flag = true
-  end
-  if dtype_in == float then
+  if dtype_in == double or dtype_in == float then
     real_flag = true
   end
 
   assert(dim >= 1 and dim <= 3, "currently only 1 <= dim <= 3 is supported")
   
-
   local iface = {}
 
   -- Create fspaces depending on whether GPUs are used or not
@@ -275,7 +270,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     format.println("Calling get_plan...")
     var p = iface.get_plan(plan, false)
 
-
     --Get_executing process: takes a c.legion_runtime_t and returns c.legion_runtime_get_executing_processor(runtime, ctx)
     var address_space = c.legion_processor_address_space(get_executing_processor(__runtime())) --legion_processor_address_space: takes a legion_processor_t proc and returns a legion_address_space_t
 
@@ -332,19 +326,14 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     p.address_space = address_space
 
     --If GPUs, call make_plan_GPU
-    rescape
-      if default_foreign then
-        remit rquote
-          format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
-          if iface.get_num_local_gpus() > 0 then
-            format.println("GPUs identified: calling make_plan_gpu...")
-            make_plan_gpu(input, output, plan, p.address_space)
-          end
-        end
-      else
-        return rquote end
-      end
+    if default_foreign then
+      format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
+      if iface.get_num_local_gpus() > 0 then
+        format.println("GPUs identified: calling make_plan_gpu...")
+        make_plan_gpu(input, output, plan, p.address_space)
+      end 
     end
+
   end
 
   task iface.make_plan_task(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan))
@@ -357,7 +346,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   task iface.make_plan_distrib(input : region(ispace(itype), dtype_in), input_part : partition(disjoint, input, ispace(int1d)), output : region(ispace(itype), dtype_out), output_part : partition(disjoint, output, ispace(int1d)), plan : region(ispace(int1d), iface.plan), plan_part : partition(disjoint, plan, ispace(int1d)))
   where reads writes(input, output, plan) do
     
-
     --Get number of nodes and check consistency of nodes/colors
     var n = iface.get_num_nodes()
     regentlib.assert(input_part.colors.bounds.hi - input_part.colors.bounds.lo + 1 == int1d(n), "input_part colors size must be equal to the number of nodes")
@@ -367,7 +355,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     var p : iface.plan
     --T(x) is a cast from type T to a value x
     p.p = [fftw_c.fftw_plan](0)
-    p.address_space
 
     if default_foreign then
       p.cufft_p = 0
@@ -404,7 +391,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
     format.println("size of dtype is {}", dtype_size)
 
-    --If in GPU mode, usecufftExecZ2Z
+    --If in GPU mode, use cufftExecZ2Z
     if c.legion_processor_kind(proc) == c.TOC_PROC then
       c.printf("execute plan via cuFFT\n")
 
@@ -446,7 +433,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     else
       c.printf("execute plan via FFTW\n")
 
-      -- TODO: Float verion
       if dtype_size == 8 then
         if real_flag then
           format.println("executing r2c")
@@ -494,7 +480,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       cufft_c.cufftDestroy(p.cufft_p) 
     end
     
-    -- Else, cal fftw_destroy
+    -- Else, call fftw_destroy
     c.printf("Destroy plan via FFTW\n")
     fftw_c.fftw_destroy_plan(p.p)
     --fftw_c.fftwf_destroy_plan(p.float_p)
@@ -511,7 +497,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   task iface.destroy_plan_distrib(plan : region(ispace(int1d), iface.plan), plan_part : partition(disjoint, plan, ispace(int1d)))
   where reads writes(plan) do
     format.println("In iface.destroy_plan_distrib...")
-
     for i in plan_part.colors do
       iface.destroy_plan_task(plan_part[i])
     end

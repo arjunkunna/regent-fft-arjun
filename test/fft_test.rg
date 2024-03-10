@@ -82,6 +82,28 @@ where reads (input) do
 end
 
 
+
+
+--task compare_regions_double_complex(r1 : region(ispace(int1d), complex64), r2 : region(ispace(int1d), complex64))
+--where reads (r1, r2) do
+--  var regions_same = true
+--  for x in r1 do
+--    if (r1[x].real == r2[x].real) and (r1[x].imag == r2[x].imag) then
+--      format.println("indices match")
+--    else
+--      format.println("Regions are the not the same: r1 real is {}, r2 real is {}, r1 imag is {}, r2 imag is {} for index {}", r1[x].real, r2[x].real, r1[x].imag, r2[x].imag, x)
+--      regions_same = false
+--    end
+--  end
+--  if regions_same == true then
+--    format.println("Regions are the same")
+--  end
+--  return regions_same      
+--end
+
+
+
+
 ----SET UP INTERFACES----
 
 --function fft.generate_fft_interface(itype, dtype): itype = int1d, dtype = complex64, dim = itype.dim =1 
@@ -210,13 +232,17 @@ task test1d()
   format.println("Creating input and output arrays...")
 
   -- Initialize input and output arrays
-  var r = region(ispace(int1d, 3), complex64)
-  var s = region(ispace(int1d, 3), complex64)
+  var r = region(ispace(int1d, 5), complex64)
+  var s = region(ispace(int1d, 5), complex64)
 
-  for x in r do
-    r[x].real = 4
-    r[x].imag = 4
-  end
+
+  r[0].real = 3
+  r[0].imag = 3
+
+  --for x in r do
+  --  r[x].real = 3
+  --  r[x].imag = 3
+  --end
 
   -- Initialize output array
   fill(s, 0)
@@ -272,8 +298,8 @@ task test2d()
   var r = region(ispace(int2d, { 2, 2 }), complex64)
   var s = region(ispace(int2d, { 2, 2 }), complex64)
   for x in r do
-    r[x].real = 2
-    r[x].imag = 2
+    r[x].real = 5
+    r[x].imag = 5
   end
   fill(s, 1)
   print_array_2d_double_complex(r, "Input array")
@@ -302,18 +328,17 @@ task test3d()
   print_array_3d_double_complex(s, "Output array")
   fft3d.destroy_plan(p)
   format.println("Completed test3d...")
-
 end
 
 -- Main function
 task main()
  --test1d_real()
- --test1d_float()
+ test1d_float()
  --test1d_float_real()
  --test1d()
  --test1d_distrib()
  --test2d()
- test3d()
+ --test3d()
 end
 
 --Include mapper
