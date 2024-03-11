@@ -239,10 +239,10 @@ task test1d()
   r[0].real = 3
   r[0].imag = 3
 
-  --for x in r do
-  --  r[x].real = 3
-  --  r[x].imag = 3
-  --end
+  for x in r do
+    r[x].real = 3
+    r[x].imag = 3
+  end
 
   -- Initialize output array
   fill(s, 0)
@@ -333,9 +333,9 @@ end
 -- Main function
 task main()
  --test1d_real()
- test1d_float()
+ --test1d_float()
  --test1d_float_real()
- --test1d()
+ test1d()
  --test1d_distrib()
  --test2d()
  --test3d()
