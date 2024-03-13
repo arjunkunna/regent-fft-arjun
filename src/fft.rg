@@ -330,6 +330,29 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
   end
 
+  print(itype)
+  __demand(__inline)
+  task iface.batch_dft(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan), batches : int1d)
+  where reads writes(input, output, plan) do
+
+    format.println("num_batches is {}", batches)
+
+  
+    --Create batched plan 
+    
+
+    --Execute batched plan 
+
+    
+    --for i in num_dims
+      --concatenate all of the output[i]s together: output = output + input[:,:,i]
+    --end
+
+    --Return output region 
+   -- return output
+  end
+
+
   task iface.make_plan_task(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan))
   where reads writes(input, output, plan) do
     iface.make_plan(input, output, plan)

@@ -118,6 +118,7 @@ local fft3d_float = fft.generate_fft_interface(int3d, complex32, complex32)
 local fft1d_real = fft.generate_fft_interface(int1d, double, complex64)
 local fft1d_float_real = fft.generate_fft_interface(int1d, float, complex32)
 
+local fft3d_batch = fft.generate_fft_interface(int3d, complex64, complex64)
 
 
 -----TEST TASKS-----
@@ -330,15 +331,36 @@ task test3d()
   format.println("Completed test3d...")
 end
 
+
+--demand(__inline)
+task test3d_batch()
+  -- Initialize input and output arrays
+  var r = region(ispace(int3d, { 4, 5, 6 }), complex64)
+  var s = region(ispace(int3d, { 4, 5, 6 }), complex64)
+  
+  for x in r do
+    r[x].real = 3
+    r[x].imag = 3
+  end
+
+  -- Initialize output array
+  fill(s, 0)
+
+  -- Create plan region and call batch_dft
+  var p = region(ispace(int1d, 1), fft3d_batch.plan)
+  fft3d_batch.batch_dft(r, s, p, 6)
+end
+
 -- Main function
 task main()
  --test1d_real()
  --test1d_float()
  --test1d_float_real()
- test1d()
+ --test1d()
  --test1d_distrib()
  --test2d()
  --test3d()
+ test3d_batch()
 end
 
 --Include mapper
