@@ -6,4 +6,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: ../legion/language/regent.py test/fft_test.rg 
+      - run: source env.sh
+      - run: ../legion/language/regent.py test/fft_test.rg
