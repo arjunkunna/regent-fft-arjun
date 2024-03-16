@@ -332,7 +332,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
   print(itype)
   __demand(__inline)
-  task iface.batch_dft(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan), batches : int1d)
+  task iface.make_plan_batch(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan), batches : int1d)
   where reads writes(input, output, plan) do
 
     format.println("num_batches is {}", batches)
