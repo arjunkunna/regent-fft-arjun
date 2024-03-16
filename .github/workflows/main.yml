@@ -1,5 +1,5 @@
 name: Regent-FFT Tests
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} is testing Regent-FFT
 on: [push]
 jobs:
   regent-FFT-tests:
@@ -7,4 +7,4 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: source env.sh
-      - run: ../legion/language/regent.py test/fft_test.rg
+      - run: ./test.sh
