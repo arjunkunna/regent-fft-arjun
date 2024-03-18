@@ -3,6 +3,7 @@ run-name: ${{ github.actor }} is testing Regent-FFT
 on: 
   push:
   workflow_dispatch:
+    
 jobs:
   regent-FFT-tests:
     runs-on: ${{ matrix.os }}
