@@ -17,7 +17,7 @@ jobs:
       - run: cd legion/language
       - run: ./install.py
       - run: cd ../..
-      - run: legion/language/regent.py fft_test.rg
+      - run: ./legion/language/regent.py test/fft_test.rg
         env:
             DEBUG: ${{ matrix.debug }}
             USE_REGENT: '1'
