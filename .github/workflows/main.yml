@@ -3,7 +3,7 @@ run-name: ${{ github.actor }} is testing Regent-FFT
 on: 
   push:
   workflow_dispatch:
-    
+
 jobs:
   regent-FFT-tests:
     runs-on: ${{ matrix.os }}
@@ -14,9 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: git clone https://github.com/StanfordLegion/legion.git
-      - run: cd legion/language
-      - run: DEBUG=1 USE_GASNET=0 ./scripts/setup_env.py
-      - run: cd ../..
+      - run: DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
       - run: source env.sh
       - run: ./install.py
       - run: ./legion/language/regent.py test/fft_test.rg
