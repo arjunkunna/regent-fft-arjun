@@ -25,7 +25,6 @@ fftw_c.FFTW_BACKWARD = 1
 fftw_c.FFTW_MEASURE = 0
 fftw_c.FFTW_ESTIMATE = (2 ^ 6)
 
-
 local fft = {}
 
 --itype should be the index type of the transform (int1d for 1d/int2d for 2d) and dtype = complex64
