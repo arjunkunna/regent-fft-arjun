@@ -335,8 +335,8 @@ end
 --demand(__inline)
 task test3d_batch()
   -- Initialize input and output arrays
-  var r = region(ispace(int3d, { 4, 5, 6 }), complex64)
-  var s = region(ispace(int3d, { 4, 5, 6 }), complex64)
+  var r = region(ispace(int3d, { 256, 256, 7 }), complex64)
+  var s = region(ispace(int3d, { 256,256,7 }), complex64)
   
   for x in r do
     r[x].real = 3
@@ -348,7 +348,9 @@ task test3d_batch()
 
   -- Create plan region and call batch_dft
   var p = region(ispace(int1d, 1), fft3d_batch.plan)
-  fft3d_batch.batch_dft(r, s, p, 6)
+  fft3d_batch.make_plan_batch(r, s, p)
+  fft3d_batch.execute_plan_task(r, s, p)
+  fft3d_batch.destroy_plan(p)
 end
 
 -- Main function
