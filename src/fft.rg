@@ -374,12 +374,19 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         var n : int[dim] --n is an array of size dim with the size of each dimension in the entries
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
 
+        var n_batch : int[dim-1]
+        for i = 0, dim do
+          n_batch[i] = n[i]
+        end
+
         var offset_in = get_offset_in(rect_t_in(input.ispace.bounds), __physical(input)[0], __fields(input)[0])
 
         var offset_1 = offset_in[0].offset
         var offset_2 = offset_in[1].offset
         var offset_3 = offset_in[2].offset
-        var num_batches = offset_3/offset_2
+        var i_dist = offset_3/offset_1
+
+        format.println("n[0] = {}, n[1] = {}, n[2] = {}, n_batch[0] = {}, n_batch[1] = {}, i_dist = {}", n[0], n[1], n[2], n_batch[0], n_batch[1], i_dist)
 
         --Call cufftPlanMany
         --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
@@ -398,7 +405,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
           ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
         elseif dtype_size == 16 then
           format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), offset_1, offset_3, [&int](0), offset_1, offset_3, cufft_c.CUFFT_Z2Z, offset_3)
+          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], nullptr, 1, i_dist, nullptr, 1, i_dist, cufft_c.CUFFT_Z2Z, n[dim-1])
         end
 
         --Check return value of cufftPlanMany
