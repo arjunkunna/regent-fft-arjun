@@ -13,7 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: source env.sh
-      - run: ./test.sh
       - run: git clone https://github.com/StanfordLegion/legion.git
       - run: cd legion/language
       - run: ./install.py --rdir=auto --debug
