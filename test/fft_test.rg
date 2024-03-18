@@ -81,6 +81,17 @@ where reads (input) do
   format.println("]\n")
 end
 
+task print_array_3d_double_real(input : region(ispace(int3d), double), arrayName: rawstring)
+where reads (input) do
+  format.println("\n{} = [", arrayName)
+  format.println("Bounds = {}", input.bounds)
+  for x in input do
+    var currInt = input[x]
+    format.println("{}, ", currInt)
+  end
+  format.println("]\n")
+end
+
 
 
 
@@ -119,7 +130,7 @@ local fft1d_real = fft.generate_fft_interface(int1d, double, complex64)
 local fft1d_float_real = fft.generate_fft_interface(int1d, float, complex32)
 
 local fft3d_batch = fft.generate_fft_interface(int3d, complex64, complex64)
-
+local fft3d_batch_real = fft.generate_fft_interface(int3d, double, complex64)
 
 -----TEST TASKS-----
 
@@ -335,8 +346,8 @@ end
 --demand(__inline)
 task test3d_batch()
   -- Initialize input and output arrays
-  var r = region(ispace(int3d, { 256, 256, 7 }), complex64)
-  var s = region(ispace(int3d, { 256,256,7 }), complex64)
+  var r = region(ispace(int3d, { 3, 3, 2 }), complex64)
+  var s = region(ispace(int3d, { 3,3,2 }), complex64)
   
   for x in r do
     r[x].real = 3
@@ -346,11 +357,34 @@ task test3d_batch()
   -- Initialize output array
   fill(s, 0)
 
+  print_array_3d_double_complex(r, "Input array")
+
   -- Create plan region and call batch_dft
   var p = region(ispace(int1d, 1), fft3d_batch.plan)
   fft3d_batch.make_plan_batch(r, s, p)
   fft3d_batch.execute_plan_task(r, s, p)
+
+  print_array_3d_double_complex(s, "Output array")
   fft3d_batch.destroy_plan(p)
+end
+
+--demand(__inline)
+task test3d_batch_real()
+  -- Initialize input and output arrays
+  var r = region(ispace(int3d, { 3, 3, 2 }), double)
+  var s = region(ispace(int3d, { 3,3,2 }), complex64)
+  
+  fill(r, 3)
+  -- Initialize output array
+  fill(s, 0)
+  print_array_3d_double_real(r, "Input array")
+
+  -- Create plan region and call batch_dft
+  var p = region(ispace(int1d, 1), fft3d_batch_real.plan)
+  fft3d_batch_real.make_plan_batch(r, s, p)
+  fft3d_batch_real.execute_plan_task(r, s, p)
+  print_array_3d_double_complex(s, "Output array")
+  fft3d_batch_real.destroy_plan(p)
 end
 
 -- Main function
@@ -363,6 +397,7 @@ task main()
  --test2d()
  --test3d()
  test3d_batch()
+ --test3d_batch_real()
 end
 
 --Include mapper

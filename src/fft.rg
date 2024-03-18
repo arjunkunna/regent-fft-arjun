@@ -396,16 +396,16 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
         if dtype_size == 8 and real_flag then
           format.println("Calling cufftPlanMany with CUFFT_R2C ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_R2C, 1)
+          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], &n_batch[0], 1, i_dist, &n_batch[0], 1, i_dist, cufft_c.CUFFT_R2C, n[dim-1])
         elseif dtype_size == 8 then
           format.println("Calling cufftPlanMany with CUFFT_C2C ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_C2C, 1)
+          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], &n_batch[0], 1, i_dist, &n_batch[0], 1, i_dist, cufft_c.CUFFT_C2C, n[dim-1])
         elseif real_flag and dtype_size == 16 then
           format.println("Calling cufftPlanMany with CUFFT_D2Z ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim, &n[0], [&int](0), 0, 0, [&int](0), 0, 0, cufft_c.CUFFT_D2Z, 1)
+          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], &n_batch[0], 1, i_dist, &n_batch[0], 1, i_dist, cufft_c.CUFFT_D2Z, n[dim-1])
         elseif dtype_size == 16 then
           format.println("Calling cufftPlanMany with CUFFT_Z2Z ...")
-          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], nullptr, 1, i_dist, nullptr, 1, i_dist, cufft_c.CUFFT_Z2Z, n[dim-1])
+          ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], &n_batch[0], 1, i_dist, &n_batch[0], 1, i_dist, cufft_c.CUFFT_Z2Z, n[dim-1])
         end
 
         --Check return value of cufftPlanMany
@@ -444,10 +444,9 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     var offset_1 = offset_in[0].offset
     var offset_2 = offset_in[1].offset
     var offset_3 = offset_in[2].offset
-    --var sizeofcomplex64 = terralib.sizeof(complex64)
+    var i_dist = offset_3/offset_1
 
     format.println("Offset 1 = {}, Offset 2 = {}, Offset 3 = {}", offset_1, offset_2, offset_3)
-
 
     --Call fftw_c.fftw_plan_dft_1d: fftw_plan_dft_1d(int n, fftw_complex *in, fftw_complex *out,int sign, unsigned flags). n is the size of transform, in and out are pointers to the input and output arrays. Sign is the sign of the exponent in the transform, can either be FFTW_FORWARD (1) or FFTW_BACKWARD (-1). Flags: FFTW_ESTIMATE, on the contrary, does not run any computation
     format.println("Storing fftw_plan in p.p...")
@@ -458,16 +457,16 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
     --dtype size is 8 for complex32 and 16 for complex64
     format.println("Size of dtype is {}", dtype_size)
 
-
     --If GPUs, call make_plan_GPU
     if default_foreign then
       format.println("Num_local_gpus is {}", iface.get_num_local_gpus())
       if iface.get_num_local_gpus() > 0 then
         format.println("GPUs identified: calling make_plan_gpu_batch...")
-        make_plan_gpu(input, output, plan, p.address_space)
+        make_plan_gpu_batch(input, output, plan, p.address_space)
       end 
+    end
     
-    elseif dtype_size == 8 and real_flag then
+    if dtype_size == 8 and real_flag then
       format.println("data type is float")
       var n : int[dim]
       ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
@@ -484,18 +483,34 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       format.println("input is real")
       var n : int[dim]
       ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
-      p.p = fftw_c.fftw_plan_dft_r2c(dim, &n[0], [&double](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_ESTIMATE)
+
+      var n_batch : int[dim-1]
+      for i = 0, dim do
+        n_batch[i] = n[i]
+      end
+      
+      format.println("fftw_plan_many_dft_r2c: n[0] = {}, n[1] = {}, n[2] = {}, n_batch[0] = {}, n_batch[1] = {}, i_dist = {}", n[0], n[1], n[2], n_batch[0], n_batch[1], i_dist)
+      p.p = fftw_c.fftw_plan_many_dft_r2c(dim-1, &n_batch[0], n[dim-1], [&double](input_base), &n_batch[0], 1, i_dist, [&fftw_c.fftw_complex](output_base), &n_batch[0], 1, i_dist, fftw_c.FFTW_ESTIMATE)
 
     elseif dtype_size == 16 then
       var n : int[dim]
       ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
+
       format.println("n[0] is {}, dim is {}", n[0], dim)
-      p.p = fftw_c.fftw_plan_dft(dim, &n[0], [&fftw_c.fftw_complex](input_base), [&fftw_c.fftw_complex](output_base), fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
-    end
 
-    p.address_space = address_space
+      var n_batch : int[dim-1]
+      for i = 0, dim do
+        n_batch[i] = n[i]
+      end
 
+      format.println("n[0] = {}, n[1] = {}, n[2] = {}, n_batch[0] = {}, n_batch[1] = {}, i_dist = {}", n[0], n[1], n[2], n_batch[0], n_batch[1], i_dist)
+      --fftw_plan fftw_plan_many_dft(int rank, const int *n, int howmany, fftw_complex *in, const int *inembed, int istride, int idist, fftw_complex *out, const int *onembed, int ostride, int odist, int sign, unsigned flags);
+      --ok = cufft_c.cufftPlanMany(&p.cufft_p, dim-1, &n_batch[0], &n_batch[0], 1, i_dist, &n_batch[0], 1, i_dist, cufft_c.CUFFT_Z2Z, n[dim-1])
+      --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
+      p.p = fftw_c.fftw_plan_many_dft(dim-1, &n_batch[0], n[dim-1], [&fftw_c.fftw_complex](input_base), &n_batch[0], 1, i_dist, [&fftw_c.fftw_complex](output_base), &n_batch[0], 1, i_dist,  fftw_c.FFTW_FORWARD, fftw_c.FFTW_ESTIMATE)
     
+    end
+    p.address_space = address_space
   end
 
 
