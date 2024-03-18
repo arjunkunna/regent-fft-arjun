@@ -15,7 +15,7 @@ jobs:
       - run: source env.sh
       - run: git clone https://github.com/StanfordLegion/legion.git
       - run: cd legion/language
-      - run: ./install.py --rdir=auto --debug
+      - run: ./install.py
       - run: cd ../..
       - run: legion/language/regent.py fft_test.rg
         env:
