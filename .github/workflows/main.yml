@@ -12,11 +12,10 @@ jobs:
         debug: ['1', '0']
     steps:
       - uses: actions/checkout@v1
-      - run: source env.sh
       - run: git clone https://github.com/StanfordLegion/legion.git
-      - run: cd legion/language
+      - run: legion/language/install.py --rdir=auto --debug
+      - run: source env.sh
       - run: ./install.py
-      - run: cd ../..
       - run: ./legion/language/regent.py test/fft_test.rg
         env:
             DEBUG: ${{ matrix.debug }}
