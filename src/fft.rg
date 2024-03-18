@@ -19,14 +19,12 @@ if default_foreign then
   terralib.linklibrary("libcufft.so")
 end
 
---Hack: get defines from fftw3.h
 fftw_c.FFTW_FORWARD = -1
 fftw_c.FFTW_BACKWARD = 1
 fftw_c.FFTW_MEASURE = 0
 fftw_c.FFTW_ESTIMATE = (2 ^ 6)
 
 local fft = {}
-
 
 --itype should be the index type of the transform (int1d for 1d/int2d for 2d) and dtype = complex64
 function fft.generate_fft_interface(itype, dtype_in, dtype_out)
@@ -93,7 +91,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
       return base_pointer
     end
 
-
     --Function to get base pointer of region: returns base_pointer
     local terra get_offset(rect : rect_t, physical : c.legion_physical_region_t, field : c.legion_field_id_t)
       var subrect : rect_t
@@ -140,12 +137,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   task iface.get_tunable(tunable_id : int)
     var f = c.legion_runtime_select_tunable_value(__runtime(), __context(), tunable_id, 0, 0)
     var n = __future(int64, f)
-
-    -- FIXME (Elliott): I thought Regent was supposed to copy on
-    -- assignment, but that seems not to happen here, so this would
-    -- result in a double destroy if we free here.
-
-    -- c.legion_future_destroy(f)
+    -- c.legion_future_destroy(f) -- FIXME (Elliott): I thought Regent was supposed to copy on assignment, but that seems not to happen here, so this would result in a double destroy if we free here.
     return n
   end
 
@@ -158,7 +150,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   task iface.get_num_local_gpus()
     return iface.get_tunable(DEFAULT_TUNABLE_LOCAL_GPUS)
   end
-
 
   --Task to return pointer to plan. Takes plan region and returns pointer to plan
    __demand(__inline)
@@ -232,8 +223,7 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
         ;[data.range(dim):map(function(i) return rquote n[i] = hi.x[i] - lo.x[i] + 1 end end)]
       
 
-        --Call cufftPlanMany
-        --cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
+        --Call cufftPlanMany: cufftResult cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed, int istride, int idist, int *onembed, int ostride, int odist, cufftType type, int batch) --rank = dimensionality of transform (1,2,3)
         format.println("Calling cufftPlanMany...")
 
         var ok = 0
@@ -672,6 +662,5 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
 
   return iface
 end
-
 
 return fft

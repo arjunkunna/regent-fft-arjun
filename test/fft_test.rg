@@ -396,8 +396,8 @@ task main()
  --test1d_distrib()
  --test2d()
  --test3d()
- test3d_batch()
- --test3d_batch_real()
+ --test3d_batch()
+ test3d_batch_real()
 end
 
 --Include mapper
