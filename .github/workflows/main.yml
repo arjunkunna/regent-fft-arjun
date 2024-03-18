@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: git clone https://github.com/StanfordLegion/legion.git
-      - run: DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
+      - run: CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
       - run: source env.sh
       - run: ./install.py
       - run: ./legion/language/regent.py test/fft_test.rg
