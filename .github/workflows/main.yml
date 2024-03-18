@@ -3,8 +3,17 @@ run-name: ${{ github.actor }} is testing Regent-FFT
 on: [push]
 jobs:
   regent-FFT-tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ['ubuntu-22.04'] # 'macos-11' # FIXME: macOS is broken: https://github.com/StanfordLegion/legion/issues/213
+        debug: ['1', '0']
     steps:
       - uses: actions/checkout@v1
       - run: source env.sh
       - run: ./test.sh
+        env:
+            DEBUG: ${{ matrix.debug }}
+            USE_REGENT: '1'
+            INSTALL_DEPS: '1'
+            SUDO_COMMAND: sudo
