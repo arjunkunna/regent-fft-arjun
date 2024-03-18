@@ -27,7 +27,6 @@ fftw_c.FFTW_ESTIMATE = (2 ^ 6)
 
 local fft = {}
 
-
 --itype should be the index type of the transform (int1d for 1d/int2d for 2d) and dtype = complex64
 function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   assert(regentlib.is_index_type(itype), "requires an index type as the first argument")
