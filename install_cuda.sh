@@ -5,6 +5,8 @@ set -x
 
 sudo_command="$1"
 
+sudo apt-get update -qq
+
 $sudo_command apt-get update -qq
 $sudo_command apt-get install -qq software-properties-common
 wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
