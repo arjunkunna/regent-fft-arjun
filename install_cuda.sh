@@ -12,7 +12,7 @@ sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/
 sudo apt-get update -qq
 sudo apt-get install -qq cuda-compiler-11.6
 
-CUDA_PATH=/usr/local/cuda-${CUDA_MAJOR}.${CUDA_MINOR}
+CUDA_PATH=/usr/local/cuda-11.6
 echo "CUDA_PATH=${CUDA_PATH}"
 export CUDA_PATH=${CUDA_PATH}
 export PATH="$CUDA_PATH/bin:$PATH"
