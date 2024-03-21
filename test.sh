@@ -2,8 +2,8 @@ export INCLUDE_PATH="$INCLUDE_PATH;$PWD/fftw-3.3.8/install/include"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PWD/fftw-3.3.8/install/lib"
 export TERRA_PATH="$TERRA_PATH;$PWD/src/?.rg"
 
-export CUDA_PATH=$PWD/usr/local/cuda
-export CUDA=$PWD/usr/local/cuda
+export CUDA_PATH=/usr/local/cuda
+export CUDA=/usr/local/cuda
 
 echo "CUDA_PATH=${CUDA_PATH}"
 export PATH="$CUDA_PATH/bin:$PATH"
