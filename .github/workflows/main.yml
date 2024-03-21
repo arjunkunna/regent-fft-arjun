@@ -16,7 +16,7 @@ jobs:
       - run: ./install_cuda.sh
       - run: ./test.sh
         env:
-            DEBUG: ${{ matrix.debug }}
-            USE_REGENT: '1'
-            INSTALL_DEPS: '1'
-            SUDO_COMMAND: sudo
+          DEBUG: ${{ matrix.debug }}
+          USE_REGENT: '1'
+          INSTALL_DEPS: '1'
+          SUDO_COMMAND: sudo
