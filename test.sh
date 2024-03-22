@@ -34,8 +34,6 @@ ls -l /usr/local/cuda
 ls -lH /usr/local/cuda
 ls -lH /usr/local/cuda/include
 
-
-
 --git clone https://github.com/StanfordLegion/legion.git
 --CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
 --./install.py
