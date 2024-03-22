@@ -21,10 +21,12 @@ export INCLUDE_PATH="$INCLUDE_PATH;$PWD/usr/local/cuda/include"
 export CUDA_PATH=/usr/local/cuda
 export CUDA=/usr/local/cuda
 
+
 #echo "CUDA_PATH=${CUDA_PATH}"
 export PATH="$CUDA_PATH/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
+which nvcc
 
 #git clone https://github.com/StanfordLegion/legion.git
 #CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
