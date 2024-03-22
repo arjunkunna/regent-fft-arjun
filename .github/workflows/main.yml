@@ -13,18 +13,26 @@ jobs:
         debug: ['1', '0']
 
     steps:
-      - uses: Jimver/cuda-toolkit@v0.2.14
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.14
         id: cuda-toolkit
         with:
           cuda: '12.3.2'
 
-      - run: echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"
-      - run: echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
-      - run: nvcc -V
+      - name: Check CUDA Version
+        run: echo "Installed CUDA version is: ${{steps.cuda-toolkit.outputs.cuda}}"
 
-    steps:
-      - uses: actions/checkout@v1
-      - run: ./test.sh
+      - name: Print CUDA Installation Location
+        run: echo "CUDA install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+
+      - name: Check nvcc Version
+        run: nvcc -V
+
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+
+      - name: Run Test Script
+        run: ./test.sh
         env:
           DEBUG: ${{ matrix.debug }}
           USE_REGENT: '1'
