@@ -36,7 +36,6 @@ if [[ $GITHUB_ACTIONS ]]; then
     echo "LD_LIBRARY_PATH=${CUDA_PATH}/lib64:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
 fi
 
-echo find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
 
 #git clone https://github.com/StanfordLegion/legion.git
 #CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
