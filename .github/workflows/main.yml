@@ -13,7 +13,7 @@ jobs:
         debug: ['1', '0']
 
     name: Install CUDA
-        uses: NVIDIA/setup-cuda@v1
+      - uses: NVIDIA/setup-cuda@v1
         with:
           cuda-version: '12.3'
           cudnn-version: '8.0'
