@@ -14,14 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: ./test.sh
-      - run: |
-          CUDA_PATH=$(dirname "$(dirname "$(command -v nvcc)")")
-          echo "CUDA is installed in: $CUDA_PATH"
-      - run: |
-          find . -name "cufftXt.h" -print 
-      - run: |
-          apt-get update && apt-get install tree -y
-          tree ./
+      - run: which nvcc
+      - run: ls -l /usr/local 
+      - run: ls -l /usr/local/cuda
       
         
         env:
