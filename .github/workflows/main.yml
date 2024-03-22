@@ -19,6 +19,9 @@ jobs:
           echo "CUDA is installed in: $CUDA_PATH"
       - run: |
           find /usr/local/cuda -name "cufftXt.h" -print
+      - run: |
+          apt-get update && apt-get install tree -y
+          tree ./
       
         
         env:
