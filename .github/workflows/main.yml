@@ -14,11 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - run: ./test.sh
-      - run: which nvcc
-      - run: ls -l /usr/local 
-      - run: ls -l /usr/local/cuda
-      
-        
         env:
           DEBUG: ${{ matrix.debug }}
           USE_REGENT: '1'

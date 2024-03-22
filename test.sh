@@ -26,7 +26,10 @@ export CUDA=/usr/local/cuda
 export PATH="$CUDA_PATH/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
+
 which nvcc
+ls -l /usr/local 
+ls -l /usr/local/cuda
 
 #git clone https://github.com/StanfordLegion/legion.git
 #CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
