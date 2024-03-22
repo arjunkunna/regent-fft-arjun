@@ -11,6 +11,15 @@ jobs:
       matrix:
         os: ['ubuntu-22.04'] # 'macos-11' # FIXME: macOS is broken: https://github.com/StanfordLegion/legion/issues/213
         debug: ['1', '0']
+
+    name: Install CUDA
+        uses: NVIDIA/setup-cuda@v1
+        with:
+          cuda-version: '12.3'
+          cudnn-version: '8.0'
+          install-patch: true
+          silent: true
+
     steps:
       - uses: actions/checkout@v1
       - run: ./test.sh
