@@ -17,25 +17,13 @@ sudo apt-get update -qq
 sudo apt-get install -qq cuda-compiler-11.6
 
 
-export CUDA_PATH=/usr/local/cuda
-export CUDA=/usr/local/cuda
+#export CUDA_PATH=/usr/local/cuda
+#export CUDA=/usr/local/cuda
 
-echo "CUDA_PATH=${CUDA_PATH}"
-export PATH="$CUDA_PATH/bin:$PATH"
-export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
-export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
-
-
-# If executed on github actions, make the appropriate echo statements to update the environment
-if [[ $GITHUB_ACTIONS ]]; then
-    # Set paths for subsequent steps, using ${CUDA_PATH}
-    echo "Adding CUDA to CUDA_PATH, PATH and LD_LIBRARY_PATH"
-    echo "CUDA_PATH=${CUDA_PATH}" >> $GITHUB_ENV
-    echo "${CUDA_PATH}/bin" >> $GITHUB_PATH
-    echo "LD_LIBRARY_PATH=${CUDA_PATH}/lib:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
-    echo "LD_LIBRARY_PATH=${CUDA_PATH}/lib64:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
-fi
-
+#echo "CUDA_PATH=${CUDA_PATH}"
+#export PATH="$CUDA_PATH/bin:$PATH"
+#export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
 
 #git clone https://github.com/StanfordLegion/legion.git
 #CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
