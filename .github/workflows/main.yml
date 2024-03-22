@@ -18,7 +18,7 @@ jobs:
           CUDA_PATH=$(dirname "$(dirname "$(command -v nvcc)")")
           echo "CUDA is installed in: $CUDA_PATH"
       - run: |
-          find /usr/local/cuda -name "cufftXt.h" -print
+          find . -name "cufftXt.h" -print 
       - run: |
           apt-get update && apt-get install tree -y
           tree ./
