@@ -13,10 +13,10 @@ jobs:
         debug: ['1', '0']
 
     steps:
-    - uses: nvidia/setup-cuda@v1
+    - uses: Jimver/cuda-toolkit@v0.2.14
+      id: cuda-toolkit
       with:
-        cuda: '11.6'
-
+        cuda: '12.3.2'
     - uses: actions/checkout@v1
     - run: ./test.sh
       env:
