@@ -13,17 +13,12 @@ jobs:
         debug: ['1', '0']
 
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-
-    - name: Install CUDA Toolkit 11.6
-      uses: nvidia/setup-cuda@v1
+    - uses: nvidia/setup-cuda@v1
       with:
         cuda: '11.6'
 
-    - name: Run test
-      uses: actions/checkout@v1
-      run: ./test.sh
+    - uses: actions/checkout@v1
+    - run: ./test.sh
       env:
         DEBUG: ${{ matrix.debug }}
         USE_REGENT: '1'
