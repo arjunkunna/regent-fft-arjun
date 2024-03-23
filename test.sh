@@ -10,9 +10,6 @@ set -x
 sudo apt-get update -qq
 sudo apt-get install -qq software-properties-common
 
-sudo apt-get clean
-sudo apt-get autoclean
-
 wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
 sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
