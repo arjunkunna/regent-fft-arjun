@@ -9,6 +9,11 @@ set -x
 
 sudo apt-get update -qq
 sudo apt-get install -qq software-properties-common
+apt-cache depends cuda-toolkit-11-6
+dpkg --get-selections | grep hold
+sudo apt-get clean
+sudo apt-get autoclean
+
 wget -nv https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
 sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
@@ -33,6 +38,7 @@ ls -l /usr/local
 ls -l /usr/local/cuda
 ls -lH /usr/local/cuda
 ls -lH /usr/local/cuda/include
+nvcc --version
 
 #git clone https://github.com/StanfordLegion/legion.git
 #CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
