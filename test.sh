@@ -17,7 +17,7 @@ sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/
 
 
 sudo apt-get update -qq
-sudo apt-get install -qq cuda-toolkit-11-6
+sudo apt-get install -qq cuda-toolkit-12-2
 
 export INCLUDE_PATH="$INCLUDE_PATH;$PWD/usr/local/cuda/include"
 
