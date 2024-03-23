@@ -23,9 +23,9 @@ export CUDA_PATH="/usr/local/cuda"
 export CUDA="/usr/local/cuda"
 
 echo "CUDA_PATH=${CUDA_PATH}"
-#export PATH="$CUDA_PATH/bin:$PATH"
-#export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
-#export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
+export PATH="$CUDA_PATH/bin:$PATH"
+export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
 
 which nvcc
 ls -l /usr/local 
