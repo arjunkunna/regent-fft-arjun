@@ -392,12 +392,12 @@ task main()
  --test1d_real()
  --test1d_float()
  --test1d_float_real()
- --test1d()
+ test1d()
  --test1d_distrib()
  --test2d()
  --test3d()
  --test3d_batch()
- test3d_batch_real()
+ --test3d_batch_real()
 end
 
 --Include mapper

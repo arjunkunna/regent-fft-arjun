@@ -195,7 +195,6 @@ function fft.generate_fft_interface(itype, dtype_in, dtype_out)
   local make_plan_gpu
   if default_foreign then
     __demand(__cuda, __leaf)
-
     task make_plan_gpu(input : region(ispace(itype), dtype_in), output : region(ispace(itype), dtype_out), plan : region(ispace(int1d), iface.plan), address_space : c.legion_address_space_t)
     
     where reads writes(input, output, plan) do
