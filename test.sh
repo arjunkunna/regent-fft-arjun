@@ -41,4 +41,4 @@ nvcc --version
 git clone https://github.com/StanfordLegion/legion.git
 CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 ./legion/language/scripts/setup_env.py
 ./install.py
-./legion/language/regent.py test/fft_test.rg
+./legion/language/regent.py test/fft_test.rg -fgpu cuda -fgpu-offline 1 -fgpu-arch pascal
