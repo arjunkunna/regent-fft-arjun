@@ -22,11 +22,9 @@ sudo apt-get install -qq cuda-toolkit-12-2
 export INCLUDE_PATH="$INCLUDE_PATH;$PWD/usr/local/cuda/include"
 
 export CUDA_PATH="/usr/local/cuda"
-export CUDA_PATH="$CUDA_PATH:/etc/alternatives/cuda"
 export CUDA="/usr/local/cuda"
-export CUDA="$CUDA:/etc/alternatives/cuda"
 
-#echo "CUDA_PATH=${CUDA_PATH}"
+echo "CUDA_PATH=${CUDA_PATH}"
 export PATH="$CUDA_PATH/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
 export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
