@@ -19,15 +19,13 @@ sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/
 sudo apt-get update -qq
 sudo apt-get install -qq cuda-toolkit-12-2
 
-export INCLUDE_PATH="$INCLUDE_PATH;$PWD/usr/local/cuda/include"
-
-export CUDA_PATH="/usr/local/cuda"
-export CUDA="/usr/local/cuda"
+#export CUDA_PATH="/usr/local/cuda"
+#export CUDA="/usr/local/cuda"
 
 echo "CUDA_PATH=${CUDA_PATH}"
-export PATH="$CUDA_PATH/bin:$PATH"
-export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
-export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
+#export PATH="$CUDA_PATH/bin:$PATH"
+#export LD_LIBRARY_PATH="$CUDA_PATH/lib:$LD_LIBRARY_PATH"
+#export LD_LIBRARY_PATH="$CUDA_PATH/lib64:$LD_LIBRARY_PATH"
 
 which nvcc
 ls -l /usr/local 
@@ -37,7 +35,7 @@ ls -lH /usr/local/cuda/include
 nvcc --version
 
 
-git clone https://github.com/StanfordLegion/legion.git
-CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 USE_CUDA=1 ./legion/language/scripts/setup_env.py
-./install.py
-./legion/language/regent.py test/fft_test.rg -fgpu cuda -fgpu-offline 1 -fgpu-arch pascal
+#git clone https://github.com/StanfordLegion/legion.git
+#CC=gcc CXX=g++ DEBUG=1 USE_GASNET=0 USE_CUDA=1 ./legion/language/scripts/setup_env.py
+#./install.py
+#./legion/language/regent.py test/fft_test.rg -fgpu cuda -fgpu-offline 1 -fgpu-arch pascal
